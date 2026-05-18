@@ -5,152 +5,43 @@ import InterviewSetup from './InterviewSetup'
 
 const WS_BASE = 'ws://localhost:8000'
 
-// ── Voice hook (MediaRecorder + Backend Whisper) ──────────────────
-function useVoiceInput({ onTranscribed, onError }) {
+// ── Voice hook (Deepgram Live WebSocket streaming) ─────────────────
+const DEEPGRAM_WS_URL =
+  'wss://api.deepgram.com/v1/listen?model=nova-2&language=en-IN&smart_format=true'
+
+function useVoiceInput({ onLiveText, onError }) {
   const [voiceState, setVoiceState] = useState('IDLE') // IDLE, RECORDING, TRANSCRIBING, DONE, ERROR
   const [recSecs, setRecSecs]       = useState(0)
-  const [previewUrl, setPreviewUrl] = useState('')
+
   const mediaRecorderRef = useRef(null)
-  const chunksRef        = useRef([])
+  const wsRef            = useRef(null)
   const timerRef         = useRef(null)
   const streamRef        = useRef(null)
   const startedAtRef     = useRef(0)
   const stopDelayRef     = useRef(null)
-  const MIN_RECORD_MS    = 1400 // keep enough audio for ffmpeg/Whisper to detect speech
+  const MIN_RECORD_MS    = 800 // avoid opening/closing too fast (needs at least a few chunks)
 
-  // Pick best supported MIME type
+  const finalTextRef     = useRef('')
+  const interimTextRef   = useRef('')
+
+  // Pick best supported MIME type for MediaRecorder
   const getSupportedMime = () => {
-    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg',
+      'audio/mp4',
+    ]
     return types.find(t => {
       try { return MediaRecorder.isTypeSupported(t) } catch { return false }
     }) || ''
   }
 
-  const start = async () => {
-    try {
-      clearInterval(timerRef.current)
-      clearTimeout(stopDelayRef.current)
-      if (previewUrl) {
-        try { URL.revokeObjectURL(previewUrl) } catch {}
-        setPreviewUrl('')
-      }
-      try {
-        const prev = mediaRecorderRef.current
-        if (prev) {
-          prev.ondataavailable = null
-          prev.onstop = null
-          prev.onerror = null
-          if (prev.state === 'recording') prev.stop()
-        }
-      } catch {}
-      streamRef.current?.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-      mediaRecorderRef.current = null
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      streamRef.current = stream
-      const mimeType = getSupportedMime()
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {})
-      chunksRef.current = []
-      setRecSecs(0)
-
-      // Collect chunks. Important: do NOT pass a timeslice to start().
-      // Some browsers can produce empty/tiny blobs when stop() is called
-      // before the first slice is produced.
-      mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data) }
-
-      mr.onstop = async () => {
-        clearInterval(timerRef.current)
-        setVoiceState('TRANSCRIBING')
-        stream.getTracks().forEach(t => t.stop())
-
-        if (chunksRef.current.length === 0) {
-          setVoiceState('ERROR')
-          onError?.('No audio data captured. Please check your microphone and try again.')
-          return
-        }
-
-        const finalType = mr.mimeType || mimeType || 'audio/webm'
-        const blob = new Blob(chunksRef.current, { type: finalType })
-        try {
-          const url = URL.createObjectURL(blob)
-          setPreviewUrl(url)
-        } catch {}
-        if (blob.size < 1024) {
-          // Usually indicates silence / muted mic / device error
-          setVoiceState('ERROR')
-          onError?.('No microphone audio captured (muted/silent). Check mic permission/device and try again (hold ≥1s and speak clearly).')
-          return
-        }
-
-        const ext  = finalType.includes('ogg') ? 'ogg' : finalType.includes('mp4') ? 'mp4' : 'webm'
-        const formData = new FormData()
-        formData.append('audio_file', blob, `answer.${ext}`)
-
-        try {
-          const { data } = await api.post('/interview/transcribe', formData, {
-            timeout: 120000,
-          })
-          const text = (data.transcript || '').trim()
-          onTranscribed(text)
-          setVoiceState(text ? 'DONE' : 'ERROR')
-          if (!text) onError?.('Nothing was transcribed. Please speak clearly and try again.')
-        } catch (err) {
-          console.error('Transcription error', err)
-          const msg = err.response?.data?.detail || 'Transcription failed. Please type your answer below.'
-          setVoiceState('ERROR')
-          onError?.(msg)
-        }
-      }
-
-      mr.onerror = () => {
-        clearInterval(timerRef.current)
-        setVoiceState('ERROR')
-        onError?.('Recording error. Please try again.')
-      }
-
-      mediaRecorderRef.current = mr
-      startedAtRef.current = Date.now()
-      mr.start() // no timeslice — emit one final blob on stop
-      setVoiceState('RECORDING')
-
-      // Live recording timer
-      timerRef.current = setInterval(() => setRecSecs(s => s + 1), 1000)
-
-    } catch (err) {
-      console.error('Mic error', err)
-      const msg = err.name === 'NotAllowedError'
-        ? 'Microphone permission denied. Please allow mic access and try again.'
-        : `Microphone error: ${err.message}`
-      setVoiceState('ERROR')
-      onError?.(msg)
-    }
-  }
-
-  const stop = () => {
-    const mr = mediaRecorderRef.current
-    if (!mr || mr.state !== 'recording') return
-
-    const elapsed = Date.now() - startedAtRef.current
-    if (elapsed < MIN_RECORD_MS) {
-      // Keep recording until we reach a safe minimum duration.
-      clearTimeout(stopDelayRef.current)
-      stopDelayRef.current = setTimeout(() => stop(), MIN_RECORD_MS - elapsed)
-      return
-    }
-
-    clearInterval(timerRef.current)
-    try { mr.requestData?.() } catch {}
-    mr.stop()
-  }
-
-  const reset = () => {
+  const cleanup = () => {
     clearInterval(timerRef.current)
     clearTimeout(stopDelayRef.current)
-    if (previewUrl) {
-      try { URL.revokeObjectURL(previewUrl) } catch {}
-      setPreviewUrl('')
-    }
+
     try {
       const mr = mediaRecorderRef.current
       if (mr) {
@@ -160,15 +51,160 @@ function useVoiceInput({ onTranscribed, onError }) {
         if (mr.state === 'recording') mr.stop()
       }
     } catch {}
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
     mediaRecorderRef.current = null
-    chunksRef.current = []
+
+    try {
+      const ws = wsRef.current
+      if (ws) {
+        ws.onopen = null
+        ws.onmessage = null
+        ws.onerror = null
+        ws.onclose = null
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close()
+      }
+    } catch {}
+    wsRef.current = null
+
+    try { streamRef.current?.getTracks().forEach(t => t.stop()) } catch {}
+    streamRef.current = null
+
+    finalTextRef.current = ''
+    interimTextRef.current = ''
     setRecSecs(0)
+  }
+
+  const start = async () => {
+    try {
+      cleanup()
+      setVoiceState('TRANSCRIBING') // connecting
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Your browser does not support microphone access.')
+      }
+
+      // Clear UI text for a fresh recording
+      finalTextRef.current = ''
+      interimTextRef.current = ''
+      onLiveText?.('')
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      streamRef.current = stream
+
+      // Fetch a temporary Deepgram key from backend
+      const tokenRes = await api.get('/interview/deepgram-token', { timeout: 20000 })
+      const token = tokenRes?.data?.key
+      if (!token) throw new Error('Failed to obtain Deepgram token from backend.')
+
+      const ws = new WebSocket(DEEPGRAM_WS_URL, ['token', token])
+      wsRef.current = ws
+
+      ws.onmessage = (evt) => {
+        let msg = null
+        try { msg = JSON.parse(evt.data) } catch { return }
+        if (!msg || msg.type !== 'Results') return
+
+        const transcript = msg.channel?.alternatives?.[0]?.transcript || ''
+        if (!transcript.trim()) return
+
+        if (msg.is_final) {
+          finalTextRef.current = `${finalTextRef.current} ${transcript}`.trim()
+          interimTextRef.current = ''
+          onLiveText?.(finalTextRef.current)
+        } else {
+          interimTextRef.current = transcript
+          const combined = `${finalTextRef.current} ${interimTextRef.current}`.trim()
+          onLiveText?.(combined)
+        }
+      }
+
+      ws.onerror = () => {
+        setVoiceState('ERROR')
+        onError?.('Deepgram connection error. Please try again.')
+        cleanup()
+      }
+
+      ws.onclose = () => {
+        clearInterval(timerRef.current)
+        const combined = `${finalTextRef.current} ${interimTextRef.current}`.trim()
+        setVoiceState(combined ? 'DONE' : 'ERROR')
+        if (!combined) onError?.('No speech detected. Please speak clearly and try again.')
+        try { stream.getTracks().forEach(t => t.stop()) } catch {}
+        streamRef.current = null
+        mediaRecorderRef.current = null
+        wsRef.current = null
+      }
+
+      ws.onopen = () => {
+        const mimeType = getSupportedMime()
+        const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+        mediaRecorderRef.current = mr
+
+        mr.ondataavailable = (e) => {
+          if (!e.data || e.data.size === 0) return
+          if (ws.readyState === WebSocket.OPEN) ws.send(e.data)
+        }
+
+        mr.onerror = () => {
+          setVoiceState('ERROR')
+          onError?.('Recording error. Please try again.')
+          cleanup()
+        }
+
+        // When recording stops, flush results and ask Deepgram to close the stream.
+        mr.onstop = () => {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'CloseStream' }))
+            }
+          } catch {}
+
+          // If Deepgram doesn't close quickly, force-close after a short grace period.
+          setTimeout(() => {
+            try { if (ws.readyState === WebSocket.OPEN) ws.close() } catch {}
+          }, 3000)
+        }
+
+        startedAtRef.current = Date.now()
+        mr.start(250) // send chunks every 250ms to Deepgram
+        setVoiceState('RECORDING')
+        timerRef.current = setInterval(() => setRecSecs(s => s + 1), 1000)
+      }
+    } catch (err) {
+      const msg = err?.name === 'NotAllowedError'
+        ? 'Microphone permission denied. Please allow mic access and try again.'
+        : (err?.message || 'Could not start voice transcription.')
+      setVoiceState('ERROR')
+      onError?.(msg)
+      cleanup()
+    }
+  }
+
+  const stop = () => {
+    const mr = mediaRecorderRef.current
+    if (!mr || mr.state !== 'recording') return
+
+    const elapsed = Date.now() - startedAtRef.current
+    if (elapsed < MIN_RECORD_MS) {
+      clearTimeout(stopDelayRef.current)
+      stopDelayRef.current = setTimeout(() => stop(), MIN_RECORD_MS - elapsed)
+      return
+    }
+
+    setVoiceState('TRANSCRIBING') // finalizing / waiting for last results
+    clearInterval(timerRef.current)
+    try { mr.requestData?.() } catch {}
+    try { mr.stop() } catch {}
+  }
+
+  const reset = () => {
+    cleanup()
     setVoiceState('IDLE')
   }
 
-  return { voiceState, recSecs, previewUrl, start, stop, reset }
+  // Release mic/WS on unmount
+  useEffect(() => () => cleanup(), []) // eslint-disable-line
+
+  return { voiceState, recSecs, start, stop, reset }
 }
 
 // ── Webcam component (continuous capture for face verify) ─────────
@@ -353,8 +389,8 @@ export default function Interview() {
   const [voiceError, setVoiceError] = useState('')
   const [inputMode, setInputMode]   = useState('voice') // 'voice' | 'text'
 
-  const { voiceState, recSecs, previewUrl, start: startVoice, stop: stopVoice, reset: resetVoice } = useVoiceInput({
-    onTranscribed: useCallback(text => {
+  const { voiceState, recSecs, start: startVoice, stop: stopVoice, reset: resetVoice } = useVoiceInput({
+    onLiveText: useCallback(text => {
       setAnswer(text)
       setVoiceError('')
     }, []),
@@ -669,7 +705,7 @@ export default function Interview() {
                 }}>
                   {voiceState === 'IDLE'        && '🎙 Tap mic to start recording'}
                   {voiceState === 'RECORDING'   && `⏺ Recording… ${recSecs}s — tap to stop`}
-                  {voiceState === 'TRANSCRIBING'&& 'Converting speech to text…'}
+                  {voiceState === 'TRANSCRIBING'&& '⏳ Connecting / finalizing live transcription…'}
                   {voiceState === 'DONE'        && '✅ Answer captured — review below'}
                   {voiceState === 'ERROR'       && '⟳ Tap mic to try again'}
                 </div>
@@ -686,22 +722,13 @@ export default function Interview() {
                   fontSize: '0.97rem', lineHeight: 1.65, marginBottom: 16,
                   transition: 'border-color 0.3s',
                 }}>
-                  {voiceState === 'TRANSCRIBING'
-                    ? <span style={{ color: 'var(--clr-text-muted)', fontStyle: 'italic' }}>Processing your speech…</span>
-                    : answer
+                  {answer
                     ? <span style={{ color: 'var(--clr-text)' }}>{answer}</span>
-                    : <span style={{ color: 'var(--clr-text-muted)', fontStyle: 'italic' }}>Transcribed text will appear here…</span>
+                    : voiceState === 'TRANSCRIBING'
+                      ? <span style={{ color: 'var(--clr-text-muted)', fontStyle: 'italic' }}>Connecting to live transcription…</span>
+                      : <span style={{ color: 'var(--clr-text-muted)', fontStyle: 'italic' }}>Transcribed text will appear here…</span>
                   }
                 </div>
-
-                {/* Recorded-audio preview (helps confirm mic capture) */}
-                {previewUrl && (
-                  <audio
-                    controls
-                    src={previewUrl}
-                    style={{ width: '100%', marginBottom: 16 }}
-                  />
-                )}
 
                 {/* Action buttons row */}
                 <div style={{ display: 'flex', width: '100%', gap: 10 }}>

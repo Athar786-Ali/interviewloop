@@ -9,10 +9,12 @@ import logging
 import threading
 import uuid
 import asyncio
+import os
 from queue import Queue
 
 logger = logging.getLogger(__name__)
 
+import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -77,6 +79,104 @@ class RespondRequest(BaseModel):
 class ExecuteCodeRequest(BaseModel):
     code: str
     language: str = "python"
+
+@router.get("/deepgram-token")
+async def deepgram_token(
+    payload: dict = Depends(get_token_payload),
+):
+    """
+    Generate a short-lived Deepgram Project Key for browser WebSocket connections.
+
+    Flow:
+      1) GET /v1/projects to find a project_id for the account
+      2) POST /v1/projects/:project_id/keys to create a temporary key
+
+    Requires:
+      - DEEPGRAM_API_KEY in backend/.env (must include keys:write to create keys)
+    """
+    api_key = (os.environ.get("DEEPGRAM_API_KEY") or "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="DEEPGRAM_API_KEY is missing on the server. Add it to backend/.env and restart the backend.",
+        )
+
+    headers = {
+        "Authorization": f"Token {api_key}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            projects_res = await client.get(
+                "https://api.deepgram.com/v1/projects",
+                headers=headers,
+            )
+        except httpx.HTTPError as exc:
+            logger.exception("Deepgram list-projects request failed: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Could not reach Deepgram API.",
+            )
+
+        if projects_res.status_code != 200:
+            logger.warning(
+                "Deepgram list-projects failed: status=%s body=%s",
+                projects_res.status_code,
+                projects_res.text[:300],
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Deepgram API error while listing projects.",
+            )
+
+        projects = (projects_res.json() or {}).get("projects", [])
+        project_id = projects[0].get("project_id") if projects else None
+        if not project_id:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Deepgram API returned no projects for this API key.",
+            )
+
+        key_payload = {
+            "comment": "MIIC-Sec browser live transcription (temporary)",
+            "scopes": ["usage:write"],
+            "time_to_live_in_seconds": 3600,
+        }
+
+        try:
+            key_res = await client.post(
+                f"https://api.deepgram.com/v1/projects/{project_id}/keys",
+                headers=headers,
+                json=key_payload,
+            )
+        except httpx.HTTPError as exc:
+            logger.exception("Deepgram create-key request failed: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Could not reach Deepgram API to create a temporary key.",
+            )
+
+        if key_res.status_code != 200:
+            logger.warning(
+                "Deepgram create-key failed: status=%s body=%s",
+                key_res.status_code,
+                key_res.text[:300],
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Deepgram API error while creating a temporary key.",
+            )
+
+        temp_key = (key_res.json() or {}).get("key")
+        if not temp_key:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Deepgram API did not return a key.",
+            )
+
+        return {"success": True, "key": temp_key}
 
 
 # ═══════════════════════════════════════════════════════════════════
