@@ -19,6 +19,8 @@ function useVoiceInput({ onLiveText, onError }) {
   const streamRef        = useRef(null)
   const startedAtRef     = useRef(0)
   const stopDelayRef     = useRef(null)
+  const dgKeyIdRef       = useRef(null)   // Deepgram temp key_id for revocation
+  const dgProjectIdRef   = useRef(null)   // Deepgram project_id for revocation
   const MIN_RECORD_MS    = 800 // avoid opening/closing too fast (needs at least a few chunks)
 
   const finalTextRef     = useRef('')
@@ -70,6 +72,8 @@ function useVoiceInput({ onLiveText, onError }) {
 
     finalTextRef.current = ''
     interimTextRef.current = ''
+    dgKeyIdRef.current = null
+    dgProjectIdRef.current = null
     setRecSecs(0)
   }
 
@@ -92,8 +96,14 @@ function useVoiceInput({ onLiveText, onError }) {
 
       // Fetch a temporary Deepgram key from backend
       const tokenRes = await api.get('/interview/deepgram-token', { timeout: 20000 })
-      const token = tokenRes?.data?.key
+      const token      = tokenRes?.data?.key
+      const keyId      = tokenRes?.data?.key_id
+      const projectId  = tokenRes?.data?.project_id
       if (!token) throw new Error('Failed to obtain Deepgram token from backend.')
+
+      // Store for later revocation
+      dgKeyIdRef.current     = keyId
+      dgProjectIdRef.current = projectId
 
       const ws = new WebSocket(DEEPGRAM_WS_URL, ['token', token])
       wsRef.current = ws
@@ -132,6 +142,14 @@ function useVoiceInput({ onLiveText, onError }) {
         streamRef.current = null
         mediaRecorderRef.current = null
         wsRef.current = null
+        // Revoke the temp Deepgram key immediately — don't wait for TTL
+        const kid = dgKeyIdRef.current
+        const pid = dgProjectIdRef.current
+        if (kid && pid) {
+          api.delete(`/interview/deepgram-token?key_id=${kid}&project_id=${pid}`).catch(() => {})
+          dgKeyIdRef.current = null
+          dgProjectIdRef.current = null
+        }
       }
 
       ws.onopen = () => {

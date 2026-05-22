@@ -2,7 +2,7 @@
  * Enrollment.jsx — 5-step candidate enrollment wizard (fixed).
  * step 1: Name + email
  * step 2: Face capture × 5
- * step 3: Voice recording 10s + API submit
+ * step 3: Create enrollment (no voice)
  * step 4: TOTP QR scan + code verify
  * step 5: Success screen
  */
@@ -13,7 +13,7 @@ import styles from './Enrollment.module.css'
 
 // ─── Step Bar ─────────────────────────────────────────────────────────────────
 function StepBar({ current }) {
-  const labels = ['Info', 'Face', 'Voice', 'TOTP', 'Done']
+  const labels = ['Info', 'Face', 'Enroll', 'TOTP', 'Done']
   return (
     <div className="steps" style={{ marginBottom: 28 }}>
       {labels.map((label, i) => {
@@ -107,7 +107,7 @@ function FaceStep({ onNext }) {
     setCamOn(false)
   }
 
-  const capture = () => {
+  const capture = async () => {
     if (photos.length >= 5 || !camOn) return
     const v = videoRef.current
     const c = canvasRef.current
@@ -115,7 +115,11 @@ function FaceStep({ onNext }) {
     c.height = v.videoHeight
     c.getContext('2d').drawImage(v, 0, 0)
     const dataUrl = c.toDataURL('image/jpeg', 0.9)
-    c.toBlob(blob => setBlobs(prev => [...prev, blob]), 'image/jpeg', 0.9)
+    const blob = await new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.9))
+    if (!blob) { setError('Could not capture image. Please try again.'); return }
+    // Important: only increment the photo count once the Blob is ready,
+    // so we never end up with photos.length=5 but blobs.length<5.
+    setBlobs(prev => [...prev, blob])
     setPhotos(prev => [...prev, dataUrl])
   }
 
@@ -176,176 +180,71 @@ function FaceStep({ onNext }) {
   )
 }
 
-// ─── Step 3: Voice + Submit ───────────────────────────────────────────────────
-function VoiceStep({ name, email, faceBlobs, onNext }) {
-  const recorderRef = useRef(null)
-  const chunksRef   = useRef([])
-  const timerRef    = useRef(null)
-  const barsRef     = useRef(null)
-
-  const [recording,  setRecording]  = useState(false)
-  const [audioBlob,  setAudioBlob]  = useState(null)
-  const [seconds,    setSeconds]    = useState(0)
-  const [loading,    setLoading]    = useState(false)
-  const [error,      setError]      = useState('')
-
-  const drawBars = (analyser) => {
-    const canvas = barsRef.current
-    if (!canvas) return
-    const ctx  = canvas.getContext('2d')
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    const tick = () => {
-      if (!recorderRef.current || recorderRef.current.state === 'inactive') return
-      analyser.getByteFrequencyData(data)
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const bw = canvas.width / data.length * 2.5
-      data.forEach((v, i) => {
-        const h = (v / 255) * canvas.height
-        ctx.fillStyle = `hsl(${215 + i * 0.5}, 75%, 60%)`
-        ctx.fillRect(i * bw * 1.1, canvas.height - h, bw, h)
-      })
-      requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      chunksRef.current = []
-      const actx = new (window.AudioContext || window.webkitAudioContext)()
-      const src  = actx.createMediaStreamSource(stream)
-      const an   = actx.createAnalyser(); an.fftSize = 256
-      src.connect(an)
-      drawBars(an)
-
-      const rec = new MediaRecorder(stream)
-      rec.ondataavailable = e => chunksRef.current.push(e.data)
-      rec.onstop = () => {
-        stream.getTracks().forEach(t => t.stop())
-        setAudioBlob(new Blob(chunksRef.current, { type: 'audio/webm' }))
-        setRecording(false)
-      }
-      rec.start(100)
-      recorderRef.current = rec
-      setRecording(true)
-      setSeconds(0)
-
-      let s = 0
-      timerRef.current = setInterval(() => {
-        s += 1
-        setSeconds(s)
-        if (s >= 10) {
-          clearInterval(timerRef.current)
-          rec.stop()
-        }
-      }, 1000)
-    } catch {
-      setError('Microphone access denied — please allow microphone permission.')
-    }
-  }
-
-  const stopEarly = () => {
-    clearInterval(timerRef.current)
-    recorderRef.current?.stop()
-  }
-
-  // Convert any browser audio format (WebM/MP4/OGG) → 16-bit PCM WAV
-  const toWav = async (blob) => {
-    const arrayBuf = await blob.arrayBuffer()
-    const actx     = new (window.AudioContext || window.webkitAudioContext)()
-    const decoded  = await actx.decodeAudioData(arrayBuf)
-    const sr       = 16000
-    const offline  = new OfflineAudioContext(1, decoded.duration * sr, sr)
-    const src2     = offline.createBufferSource()
-    src2.buffer    = decoded
-    src2.connect(offline.destination)
-    src2.start(0)
-    const rendered = await offline.startRendering()
-    const pcm      = rendered.getChannelData(0)
-    const wavBuf   = new ArrayBuffer(44 + pcm.length * 2)
-    const dv       = new DataView(wavBuf)
-    const ws       = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)) }
-    ws(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true)
-    ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true)
-    dv.setUint16(20, 1, true); dv.setUint16(22, 1, true)
-    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true)
-    dv.setUint16(32, 2, true); dv.setUint16(34, 16, true)
-    ws(36, 'data'); dv.setUint32(40, pcm.length * 2, true)
-    for (let i = 0; i < pcm.length; i++)
-      dv.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true)
-    return new Blob([wavBuf], { type: 'audio/wav' })
-  }
+// ─── Step 3: Submit Enrollment (no voice) ─────────────────────────────────────
+function EnrollStep({ name, email, faceBlobs, onNext }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+  const startedRef = useRef(false)
 
   const submit = async () => {
-    if (!audioBlob) { setError('Please record your voice first.'); return }
+    if (!name?.trim() || !email?.trim()) {
+      setError('Missing name/email. Please go back and try again.')
+      return
+    }
+    if (!faceBlobs || faceBlobs.length < 5) {
+      setError('Please capture 5 face photos first.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
-      const wavBlob = await toWav(audioBlob)
       const fd = new FormData()
-      fd.append('candidate_name',  name)
+      fd.append('candidate_name', name)
       fd.append('candidate_email', email)
       faceBlobs.forEach((b, i) => fd.append('face_images', b, `face_${i}.jpg`))
-      fd.append('voice_audio', wavBlob, 'voice.wav')
-      const { data } = await api.post('/auth/enroll', fd)
+      // First enrollment can take longer due to one-time model downloads.
+      const { data } = await api.post('/auth/enroll', fd, { timeout: 600000 })
       onNext(data)
     } catch (e) {
       const detail = e.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Enrollment failed.')
+      const msg =
+        (typeof detail === 'string' ? detail : null) ||
+        e.message ||
+        'Enrollment failed.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    submit()
+  }, []) // eslint-disable-line
 
   return (
     <div className={styles.stepContent}>
-      <h2>🎙 Voice Recording</h2>
+      <h2>🧾 Creating Your Enrollment</h2>
       <p style={{ color: 'var(--clr-text-muted)', marginBottom: 16 }}>
-        Record 10 seconds of your natural speaking voice.
+        We are processing your face biometrics and generating your TOTP QR code.
       </p>
 
       {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
 
-      <canvas
-        ref={barsRef}
-        width={420} height={72}
-        style={{ width: '100%', maxWidth: 420, background: 'var(--clr-surface-2)', borderRadius: 'var(--r-sm)', marginBottom: 16 }}
-      />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-        {!recording && !audioBlob && (
-          <button className="btn btn-primary" onClick={startRecording}>⏺ Record 10 seconds</button>
-        )}
-        {recording && (
-          <button className="btn btn-danger" onClick={stopEarly}>⏹ Stop ({10 - seconds}s left)</button>
-        )}
-        {audioBlob && !recording && (
-          <span className="alert alert-success" style={{ margin: 0 }}>
-            ✓ Recording ready ({seconds}s)
-          </span>
-        )}
-        {audioBlob && !recording && (
-          <button className="btn btn-ghost" onClick={() => { setAudioBlob(null); setSeconds(0) }}>
-            Re-record
-          </button>
-        )}
-      </div>
-
       <button
         className="btn btn-success"
-        disabled={!audioBlob || loading || recording}
+        disabled={loading}
         onClick={submit}
       >
         {loading
-          ? <><span className="spinner" style={{ marginRight: 8 }} /> Enrolling — this may take 30s…</>
-          : 'Submit Enrollment →'}
+          ? <><span className="spinner" style={{ marginRight: 8 }} /> Enrolling — first time can take a few minutes…</>
+          : (error ? 'Retry Enrollment' : 'Starting…')}
       </button>
 
       {loading && (
         <p style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--clr-text-muted)' }}>
-          ⏳ Processing face + voice biometrics…
+          ⏳ Processing face biometrics…
         </p>
       )}
     </div>
@@ -473,7 +372,7 @@ export default function Enrollment() {
         )}
 
         {step === 3 && (
-          <VoiceStep
+          <EnrollStep
             name={name}
             email={email}
             faceBlobs={faceBlobs}

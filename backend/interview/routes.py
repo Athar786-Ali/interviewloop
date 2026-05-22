@@ -85,14 +85,14 @@ async def deepgram_token(
     payload: dict = Depends(get_token_payload),
 ):
     """
-    Generate a short-lived Deepgram Project Key for browser WebSocket connections.
+    Generate a short-lived Deepgram Project Key (TTL=300s) for browser WebSocket connections.
 
     Flow:
       1) GET /v1/projects to find a project_id for the account
       2) POST /v1/projects/:project_id/keys to create a temporary key
 
     Requires:
-      - DEEPGRAM_API_KEY in backend/.env (must include keys:write to create keys)
+      - DEEPGRAM_API_KEY in backend/.env with 'owner' or 'keys:write' scope
     """
     api_key = (os.environ.get("DEEPGRAM_API_KEY") or "").strip()
     if not api_key:
@@ -139,10 +139,11 @@ async def deepgram_token(
                 detail="Deepgram API returned no projects for this API key.",
             )
 
+        # TTL = 300 seconds (5 minutes) — tight window for a single interview question
         key_payload = {
             "comment": "MIIC-Sec browser live transcription (temporary)",
             "scopes": ["usage:write"],
-            "time_to_live_in_seconds": 3600,
+            "time_to_live_in_seconds": 300,
         }
 
         try:
@@ -169,14 +170,62 @@ async def deepgram_token(
                 detail="Deepgram API error while creating a temporary key.",
             )
 
-        temp_key = (key_res.json() or {}).get("key")
+        key_data = key_res.json() or {}
+        temp_key    = key_data.get("key")
+        temp_key_id = key_data.get("api_key_id")
+
         if not temp_key:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Deepgram API did not return a key.",
             )
 
-        return {"success": True, "key": temp_key}
+        logger.info("Deepgram temp key created: key_id=%s project_id=%s", temp_key_id, project_id)
+        return {
+            "success":    True,
+            "key":        temp_key,
+            "key_id":     temp_key_id,
+            "project_id": project_id,
+        }
+
+
+@router.delete("/deepgram-token")
+async def revoke_deepgram_token(
+    key_id:     str,
+    project_id: str,
+    payload: dict = Depends(get_token_payload),
+):
+    """
+    Delete a previously-issued Deepgram temporary key to revoke it immediately.
+    Called by the frontend when the voice recording session ends.
+    """
+    api_key = (os.environ.get("DEEPGRAM_API_KEY") or "").strip()
+    if not api_key or not key_id or not project_id:
+        return {"success": False, "detail": "Missing required parameters."}
+
+    headers = {
+        "Authorization": f"Token {api_key}",
+        "Accept": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            del_res = await client.delete(
+                f"https://api.deepgram.com/v1/projects/{project_id}/keys/{key_id}",
+                headers=headers,
+            )
+            if del_res.status_code == 200:
+                logger.info("Deepgram temp key revoked: key_id=%s", key_id)
+                return {"success": True}
+            else:
+                logger.warning(
+                    "Deepgram key revoke failed: status=%s body=%s",
+                    del_res.status_code, del_res.text[:200],
+                )
+                return {"success": False, "detail": f"Deepgram returned {del_res.status_code}"}
+        except httpx.HTTPError as exc:
+            logger.warning("Deepgram key revoke request failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
 
 
 # ═══════════════════════════════════════════════════════════════════

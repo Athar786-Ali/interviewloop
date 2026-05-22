@@ -14,7 +14,6 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 from database import get_db, Candidate, Session as DBSession
 from auth.liveness import detect_liveness, load_liveness_model
 from auth.face_auth import enroll_face, verify_face
-from auth.voice_auth import enroll_voice, verify_voice
 from auth.totp_auth import enroll_totp, verify_totp
 from auth.jwt_manager import create_session_token
 from crypto.audit_log import log_event
@@ -76,17 +75,15 @@ async def enroll_candidate(
     candidate_name: str = Form(...),
     candidate_email: str = Form(...),
     face_images: list[UploadFile] = File(...),
-    voice_audio: UploadFile = File(...),
     db=Depends(get_db),
 ):
     """
-    Enroll a new candidate with face, voice, and TOTP.
+    Enroll a new candidate with face and TOTP.
 
     Expects:
       - candidate_name: str
       - candidate_email: str
       - face_images: 5 image files (JPEG/PNG)
-      - voice_audio: WAV audio file (~10 seconds)
 
     Returns:
       { candidate_id, totp_qr_code_base64, message }
@@ -152,24 +149,7 @@ async def enroll_candidate(
         db.commit()
         raise HTTPException(status_code=400, detail=face_result["message"])
 
-    # ── Step 4: Enroll voice ─────────────────────────────────────
-    try:
-        voice_bytes = await voice_audio.read()
-        audio_array, sample_rate = _read_audio(voice_bytes)
-
-        voice_result = enroll_voice(candidate_id, audio_array, sample_rate, db)
-        if not voice_result["success"]:
-            db.delete(candidate)
-            db.commit()
-            raise HTTPException(status_code=400, detail=voice_result["message"])
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.delete(candidate)
-        db.commit()
-        raise HTTPException(status_code=400, detail=f"Voice enrollment failed: {e}")
-
-    # ── Step 5: Generate TOTP ────────────────────────────────────
+    # ── Step 4: Generate TOTP ────────────────────────────────────
     totp_result = enroll_totp(candidate_id, db)
 
     # ── Log enrollment event ─────────────────────────────────────
@@ -195,12 +175,11 @@ async def enroll_candidate(
 async def login_candidate(
     candidate_id: str = Form(...),
     face_image: UploadFile = File(...),
-    voice_audio: UploadFile = File(...),
     totp_code: str = Form(...),
     db=Depends(get_db),
 ):
     """
-    Multi-factor login: liveness → face → voice → TOTP.
+    Multi-factor login: liveness → face → TOTP.
 
     Returns:
       { access_token, session_id, token_type: "bearer" }
@@ -237,23 +216,7 @@ async def login_candidate(
             },
         )
 
-    # ── Step 3: Voice verification ───────────────────────────────
-    try:
-        voice_bytes = await voice_audio.read()
-        audio_array, sample_rate = _read_audio(voice_bytes)
-
-        voice_result = verify_voice(candidate_id, audio_array, sample_rate, db)
-        if not voice_result["verified"]:
-            raise HTTPException(
-                status_code=401,
-                detail="Voice verification failed",
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Voice verification failed: {e}")
-
-    # ── Step 4: TOTP verification ────────────────────────────────
+    # ── Step 3: TOTP verification ────────────────────────────────
     if not candidate.totp_secret:
         raise HTTPException(status_code=401, detail="TOTP not enrolled")
 
@@ -264,7 +227,7 @@ async def login_candidate(
             detail="TOTP verification failed",
         )
 
-    # ── Step 5: Create session ───────────────────────────────────
+    # ── Step 4: Create session ───────────────────────────────────
     session_id = str(uuid.uuid4())
     session = DBSession(
         id=session_id,
@@ -275,7 +238,7 @@ async def login_candidate(
     db.add(session)
     db.commit()
 
-    # ── Step 6: Create JWT ───────────────────────────────────────
+    # ── Step 5: Create JWT ───────────────────────────────────────
     token = create_session_token(candidate_id, session_id)
 
     # ── Log login event ──────────────────────────────────────────
@@ -285,7 +248,6 @@ async def login_candidate(
         detail={
             "candidate_id": candidate_id,
             "face_similarity": face_result["similarity"],
-            "voice_similarity": voice_result["similarity"],
         },
         db_session=db,
     )
