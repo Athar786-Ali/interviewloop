@@ -170,7 +170,14 @@ export default function Report() {
           <button className="btn btn-ghost" onClick={verifySignature} disabled={verifying}>
             {verifying ? <><span className="spinner" /> Verifying…</> : '🔏 Verify Signature'}
           </button>
-          <button className="btn btn-primary" onClick={() => window.open(`http://localhost:8000/report/${sessionId}/download`, '_blank')}>
+          <button className="btn btn-primary" onClick={async () => {
+            try {
+              const { data } = await api.get(`/report/${sessionId}/download`, { responseType: 'blob' })
+              const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+              const a = document.createElement('a'); a.href = url; a.download = `${sessionId}_report.json`
+              document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
+            } catch { alert('Download failed. Please try again.') }
+          }}>
             ⬇ Download
           </button>
         </div>

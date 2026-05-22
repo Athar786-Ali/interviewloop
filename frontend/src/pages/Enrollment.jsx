@@ -1,19 +1,20 @@
 /**
- * Enrollment.jsx — 5-step candidate enrollment wizard (fixed).
+ * Enrollment.jsx — 6-step candidate enrollment wizard.
  * step 1: Name + email
  * step 2: Face capture × 5
- * step 3: Create enrollment (no voice)
- * step 4: TOTP QR scan + code verify
- * step 5: Success screen
+ * step 3: Voice recording (5–10 s) ← NEW
+ * step 4: Submit enrollment (face + voice → TOTP QR)
+ * step 5: TOTP QR scan + code verify
+ * step 6: Success
  */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import styles from './Enrollment.module.css'
 
 // ─── Step Bar ─────────────────────────────────────────────────────────────────
 function StepBar({ current }) {
-  const labels = ['Info', 'Face', 'Enroll', 'TOTP', 'Done']
+  const labels = ['Info', 'Face', 'Voice', 'Enroll', 'TOTP', 'Done']
   return (
     <div className="steps" style={{ marginBottom: 28 }}>
       {labels.map((label, i) => {
@@ -82,8 +83,8 @@ function FaceStep({ onNext }) {
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
 
-  const [photos,  setPhotos]  = useState([])   // data URL previews
-  const [blobs,   setBlobs]   = useState([])   // File Blobs for upload
+  const [photos,  setPhotos]  = useState([])
+  const [blobs,   setBlobs]   = useState([])
   const [camOn,   setCamOn]   = useState(false)
   const [error,   setError]   = useState('')
 
@@ -95,8 +96,7 @@ function FaceStep({ onNext }) {
       videoRef.current.srcObject = stream
       streamRef.current = stream
       await videoRef.current.play()
-      setCamOn(true)
-      setError('')
+      setCamOn(true); setError('')
     } catch {
       setError('Camera access denied — please allow camera permission and try again.')
     }
@@ -109,24 +109,17 @@ function FaceStep({ onNext }) {
 
   const capture = async () => {
     if (photos.length >= 5 || !camOn) return
-    const v = videoRef.current
-    const c = canvasRef.current
-    c.width  = v.videoWidth
-    c.height = v.videoHeight
+    const v = videoRef.current, c = canvasRef.current
+    c.width = v.videoWidth; c.height = v.videoHeight
     c.getContext('2d').drawImage(v, 0, 0)
     const dataUrl = c.toDataURL('image/jpeg', 0.9)
     const blob = await new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.9))
     if (!blob) { setError('Could not capture image. Please try again.'); return }
-    // Important: only increment the photo count once the Blob is ready,
-    // so we never end up with photos.length=5 but blobs.length<5.
     setBlobs(prev => [...prev, blob])
     setPhotos(prev => [...prev, dataUrl])
   }
 
-  const proceed = () => {
-    stopCam()
-    onNext(blobs)
-  }
+  const proceed = () => { stopCam(); onNext(blobs) }
 
   return (
     <div className={styles.stepContent}>
@@ -157,7 +150,6 @@ function FaceStep({ onNext }) {
         </button>
       </div>
 
-      {/* Thumbnail row */}
       <div className="thumb-row" style={{ marginBottom: 20 }}>
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="thumb">
@@ -169,49 +161,232 @@ function FaceStep({ onNext }) {
         ))}
       </div>
 
-      <button
-        className="btn btn-success"
-        disabled={photos.length < 5}
-        onClick={proceed}
-      >
+      <button className="btn btn-success" disabled={photos.length < 5} onClick={proceed}>
         Continue →
       </button>
     </div>
   )
 }
 
-// ─── Step 3: Submit Enrollment (no voice) ─────────────────────────────────────
-function EnrollStep({ name, email, faceBlobs, onNext }) {
+// ─── Step 3: Voice Recording ──────────────────────────────────────────────────
+function VoiceStep({ onNext, onSkip }) {
+  const mediaRef    = useRef(null)
+  const chunksRef   = useRef([])
+  const timerRef    = useRef(null)
+  const animRef     = useRef(null)
+  const analyserRef = useRef(null)
+  const ctxRef      = useRef(null)
+
+  const [phase,   setPhase]   = useState('idle')     // idle | recording | done | error
+  const [secs,    setSecs]    = useState(8)           // countdown
+  const [bars,    setBars]    = useState(Array(20).fill(3))
+  const [blob,    setBlob]    = useState(null)
+  const [error,   setError]   = useState('')
+
+  // Animate waveform bars from AnalyserNode
+  const animateWave = useCallback(() => {
+    if (!analyserRef.current) return
+    const data = new Uint8Array(analyserRef.current.frequencyBinCount)
+    analyserRef.current.getByteFrequencyData(data)
+    const step  = Math.floor(data.length / 20)
+    const newBars = Array.from({ length: 20 }, (_, i) => {
+      const val = data[i * step] || 0
+      return Math.max(3, Math.round((val / 255) * 48))
+    })
+    setBars(newBars)
+    animRef.current = requestAnimationFrame(animateWave)
+  }, [])
+
+  const startRecording = async () => {
+    setError(''); setBlob(null); chunksRef.current = []
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+
+      // Set up AudioContext for waveform visualisation
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      ctxRef.current = audioCtx
+      const source   = audioCtx.createMediaStreamSource(stream)
+      const analyser = audioCtx.createAnalyser()
+      analyser.fftSize = 256
+      source.connect(analyser)
+      analyserRef.current = analyser
+      animRef.current = requestAnimationFrame(animateWave)
+
+      // Pick best supported format
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : ''
+
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+      mediaRef.current = rec
+
+      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      rec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop())
+        cancelAnimationFrame(animRef.current)
+        audioCtx.close()
+        setBars(Array(20).fill(3))
+        const recorded = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' })
+        setBlob(recorded)
+        setPhase('done')
+      }
+
+      rec.start(100)
+      setPhase('recording')
+
+      // 8-second countdown
+      let remaining = 8
+      setSecs(remaining)
+      timerRef.current = setInterval(() => {
+        remaining -= 1
+        setSecs(remaining)
+        if (remaining <= 0) {
+          clearInterval(timerRef.current)
+          rec.stop()
+        }
+      }, 1000)
+
+    } catch (e) {
+      setError('Microphone access denied — please allow microphone permission and try again.')
+      setPhase('error')
+    }
+  }
+
+  const retry = () => {
+    cancelAnimationFrame(animRef.current)
+    clearInterval(timerRef.current)
+    ctxRef.current?.close()
+    setBlob(null); setPhase('idle'); setSecs(8); setBars(Array(20).fill(3)); setError('')
+  }
+
+  useEffect(() => () => {
+    cancelAnimationFrame(animRef.current)
+    clearInterval(timerRef.current)
+    ctxRef.current?.close()
+    mediaRef.current?.stream?.getTracks().forEach(t => t.stop())
+  }, [])
+
+  return (
+    <div className={styles.stepContent}>
+      <h2>🎙️ Voice Enrollment</h2>
+      <p style={{ color: 'var(--clr-text-muted)', marginBottom: 20 }}>
+        We'll record your voice for biometric authentication. Speak naturally for <strong>8 seconds</strong> — read
+        the prompt below aloud.
+      </p>
+
+      {/* Prompt card */}
+      <div style={{
+        background: 'var(--clr-surface-2)', border: '1px solid var(--clr-border)',
+        borderRadius: 'var(--r-md)', padding: '14px 18px', marginBottom: 20,
+        fontStyle: 'italic', color: 'var(--clr-text)', lineHeight: 1.6, fontSize: '1rem',
+      }}>
+        "My name is [your name] and I am applying for a technical position. I confirm my identity
+        for the MIIC secure interview platform."
+      </div>
+
+      {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
+
+      {/* Waveform visualiser */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        gap: 3, height: 56, marginBottom: 16,
+      }}>
+        {bars.map((h, i) => (
+          <div key={i} style={{
+            width: 6, height: h,
+            borderRadius: 3,
+            background: phase === 'recording'
+              ? `hsl(${160 + i * 3}, 80%, 55%)`
+              : phase === 'done'
+                ? 'var(--clr-success)'
+                : 'var(--clr-surface-3, var(--clr-border))',
+            transition: 'height 0.08s ease',
+          }} />
+        ))}
+      </div>
+
+      {/* Status */}
+      <div style={{ textAlign: 'center', marginBottom: 20, minHeight: 28 }}>
+        {phase === 'idle'      && <span style={{ color: 'var(--clr-text-muted)' }}>Press the button below to start recording</span>}
+        {phase === 'recording' && (
+          <span style={{ color: 'var(--clr-success)', fontWeight: 600, fontSize: '1.1rem' }}>
+            🔴 Recording… {secs}s remaining
+          </span>
+        )}
+        {phase === 'done' && (
+          <span style={{ color: 'var(--clr-success)', fontWeight: 600 }}>
+            ✅ Voice recorded successfully!
+          </span>
+        )}
+        {phase === 'error' && (
+          <span style={{ color: 'var(--clr-danger)' }}>Microphone error</span>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {phase === 'idle' && (
+          <button className="btn btn-primary" onClick={startRecording} style={{ flex: 1 }}>
+            🎙️ Start Recording
+          </button>
+        )}
+        {phase === 'recording' && (
+          <button className="btn btn-ghost" disabled style={{ flex: 1 }}>
+            <span className="spinner" style={{ marginRight: 8 }} /> Recording… {secs}s
+          </button>
+        )}
+        {(phase === 'done' || phase === 'error') && (
+          <button className="btn btn-ghost" onClick={retry} style={{ flex: 1 }}>
+            🔄 Re-record
+          </button>
+        )}
+        {phase === 'done' && (
+          <button className="btn btn-success" onClick={() => onNext(blob)} style={{ flex: 1 }}>
+            Continue →
+          </button>
+        )}
+      </div>
+
+      {/* Skip option */}
+      <p style={{ marginTop: 20, fontSize: '0.78rem', color: 'var(--clr-text-muted)', textAlign: 'center' }}>
+        Voice is strongly recommended for security.{' '}
+        <button
+          onClick={onSkip}
+          style={{ background: 'none', border: 'none', color: 'var(--clr-primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 }}
+        >
+          Skip voice enrollment
+        </button>
+        {' '}(you can add it later)
+      </p>
+    </div>
+  )
+}
+
+// ─── Step 4: Submit Enrollment ────────────────────────────────────────────────
+function EnrollStep({ name, email, faceBlobs, voiceBlob, onNext }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [error,   setError]   = useState('')
   const startedRef = useRef(false)
 
   const submit = async () => {
-    if (!name?.trim() || !email?.trim()) {
-      setError('Missing name/email. Please go back and try again.')
-      return
-    }
-    if (!faceBlobs || faceBlobs.length < 5) {
-      setError('Please capture 5 face photos first.')
-      return
-    }
-    setLoading(true)
-    setError('')
+    if (!name?.trim() || !email?.trim()) { setError('Missing name/email.'); return }
+    if (!faceBlobs || faceBlobs.length < 5) { setError('Please capture 5 face photos first.'); return }
+    setLoading(true); setError('')
     try {
       const fd = new FormData()
-      fd.append('candidate_name', name)
+      fd.append('candidate_name',  name)
       fd.append('candidate_email', email)
       faceBlobs.forEach((b, i) => fd.append('face_images', b, `face_${i}.jpg`))
-      // First enrollment can take longer due to one-time model downloads.
+      if (voiceBlob && voiceBlob.size > 1000) {
+        fd.append('voice_audio', voiceBlob, 'voice_enrollment.webm')
+      }
       const { data } = await api.post('/auth/enroll', fd, { timeout: 600000 })
       onNext(data)
     } catch (e) {
       const detail = e.response?.data?.detail
-      const msg =
-        (typeof detail === 'string' ? detail : null) ||
-        e.message ||
-        'Enrollment failed.'
-      setError(msg)
+      setError((typeof detail === 'string' ? detail : null) || e.message || 'Enrollment failed.')
     } finally {
       setLoading(false)
     }
@@ -227,38 +402,47 @@ function EnrollStep({ name, email, faceBlobs, onNext }) {
     <div className={styles.stepContent}>
       <h2>🧾 Creating Your Enrollment</h2>
       <p style={{ color: 'var(--clr-text-muted)', marginBottom: 16 }}>
-        We are processing your face biometrics and generating your TOTP QR code.
+        Processing your face {voiceBlob ? '& voice ' : ''}biometrics and generating your TOTP QR code.
       </p>
 
       {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
 
-      <button
-        className="btn btn-success"
-        disabled={loading}
-        onClick={submit}
-      >
+      <button className="btn btn-success" disabled={loading} onClick={submit}>
         {loading
-          ? <><span className="spinner" style={{ marginRight: 8 }} /> Enrolling — first time can take a few minutes…</>
+          ? <><span className="spinner" style={{ marginRight: 8 }} /> Enrolling — first time may take a few minutes…</>
           : (error ? 'Retry Enrollment' : 'Starting…')}
       </button>
 
       {loading && (
         <p style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--clr-text-muted)' }}>
-          ⏳ Processing face biometrics…
+          ⏳ Processing biometrics — please wait…
         </p>
       )}
     </div>
   )
 }
 
-// ─── Step 4: TOTP Setup ───────────────────────────────────────────────────────
+// ─── Step 5: TOTP Setup ───────────────────────────────────────────────────────
 function TotpStep({ enrollData, onNext }) {
-  const [code,  setCode]  = useState('')
-  const [error, setError] = useState('')
+  const [code,    setCode]    = useState('')
+  const [error,   setError]   = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const verify = () => {
+  const verify = async () => {
     if (code.length !== 6) { setError('Enter the 6-digit code from your authenticator app.'); return }
-    onNext()
+    setLoading(true); setError('')
+    try {
+      await api.post('/auth/totp-verify-enrollment', {
+        candidate_id: enrollData?.candidate_id,
+        totp_code: code,
+      })
+      onNext()
+    } catch (e) {
+      const detail = e.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : 'TOTP code incorrect. Check your authenticator app and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -266,7 +450,7 @@ function TotpStep({ enrollData, onNext }) {
       <h2>🔐 TOTP Setup</h2>
       <p style={{ color: 'var(--clr-text-muted)', marginBottom: 20 }}>
         Scan the QR code with <strong>Google Authenticator</strong> or <strong>Authy</strong>,
-        then enter the 6-digit code below.
+        then enter the 6-digit code below to confirm it's working.
       </p>
 
       {enrollData?.totp_qr_code_base64 ? (
@@ -280,6 +464,14 @@ function TotpStep({ enrollData, onNext }) {
       ) : (
         <div className="alert alert-warning" style={{ marginBottom: 16 }}>
           QR code unavailable — use the candidate ID to set up TOTP manually.
+        </div>
+      )}
+
+      {enrollData?.voice_enrolled !== undefined && (
+        <div className={`alert ${enrollData.voice_enrolled ? 'alert-success' : 'alert-warning'}`} style={{ marginBottom: 12 }}>
+          {enrollData.voice_enrolled
+            ? '🎙️ Voice biometric enrolled successfully'
+            : '⚠️ Voice was not enrolled — login will use Face + TOTP only'}
         </div>
       )}
 
@@ -298,26 +490,24 @@ function TotpStep({ enrollData, onNext }) {
         autoFocus
       />
 
-      <button className="btn btn-success" onClick={verify} disabled={code.length !== 6}>
-        ✓ Verify &amp; Complete →
+      <button className="btn btn-success" onClick={verify} disabled={code.length !== 6 || loading}>
+        {loading ? <><span className="spinner" style={{ marginRight: 8 }} /> Verifying…</> : '✓ Verify & Complete →'}
       </button>
     </div>
   )
 }
 
-// ─── Step 5: Success ──────────────────────────────────────────────────────────
+// ─── Step 6: Success ──────────────────────────────────────────────────────────
 function SuccessStep({ enrollData }) {
   const navigate = useNavigate()
 
-  // Save candidate_id to localStorage so the Login page can pre-fill it
   useEffect(() => {
     if (enrollData?.candidate_id) {
       localStorage.setItem('lastCandidateId', enrollData.candidate_id)
     }
-    // Auto-redirect to login after 4 seconds
     const timer = setTimeout(() => navigate('/login', { replace: true }), 4000)
     return () => clearTimeout(timer)
-  }, [])   // eslint-disable-line
+  }, []) // eslint-disable-line
 
   return (
     <div className={styles.stepContent} style={{ textAlign: 'center' }}>
@@ -334,6 +524,11 @@ function SuccessStep({ enrollData }) {
         <p style={{ fontFamily: 'var(--font-mono)', color: 'var(--clr-primary)', wordBreak: 'break-all', fontSize: '0.9rem' }}>
           {enrollData?.candidate_id}
         </p>
+        {enrollData?.voice_enrolled && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--clr-success)', marginTop: 10 }}>
+            🎙️ Voice authentication enrolled — your login will include voice verification.
+          </p>
+        )}
         <p style={{ fontSize: '0.8rem', color: 'var(--clr-warning)', marginTop: 10 }}>
           ⚠️ This ID has been saved in your browser. Keep a separate copy too.
         </p>
@@ -351,11 +546,12 @@ export default function Enrollment() {
   const [name,       setName]       = useState('')
   const [email,      setEmail]      = useState('')
   const [faceBlobs,  setFaceBlobs]  = useState([])
+  const [voiceBlob,  setVoiceBlob]  = useState(null)
   const [enrollData, setEnrollData] = useState(null)
 
   return (
     <div className="page-center">
-      <div className="card" style={{ width: '100%', maxWidth: 560 }}>
+      <div className="card" style={{ width: '100%', maxWidth: 580 }}>
         <div className="page-header">
           <div className="logo-mark">🛡</div>
           <h1>MIIC-Sec Enrollment</h1>
@@ -372,19 +568,27 @@ export default function Enrollment() {
         )}
 
         {step === 3 && (
-          <EnrollStep
-            name={name}
-            email={email}
-            faceBlobs={faceBlobs}
-            onNext={(data) => { setEnrollData(data); setStep(4) }}
+          <VoiceStep
+            onNext={(blob) => { setVoiceBlob(blob); setStep(4) }}
+            onSkip={() => { setVoiceBlob(null); setStep(4) }}
           />
         )}
 
         {step === 4 && (
-          <TotpStep enrollData={enrollData} onNext={() => setStep(5)} />
+          <EnrollStep
+            name={name}
+            email={email}
+            faceBlobs={faceBlobs}
+            voiceBlob={voiceBlob}
+            onNext={(data) => { setEnrollData(data); setStep(5) }}
+          />
         )}
 
         {step === 5 && (
+          <TotpStep enrollData={enrollData} onNext={() => setStep(6)} />
+        )}
+
+        {step === 6 && (
           <SuccessStep enrollData={enrollData} />
         )}
       </div>

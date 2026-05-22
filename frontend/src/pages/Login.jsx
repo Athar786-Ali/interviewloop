@@ -2,20 +2,18 @@
  * Login.jsx — 4-step multi-factor login.
  *
  * Step 0: Enter Candidate ID
- * Step 1: Webcam face capture
- * Step 2: TOTP code → POST /auth/login → store token → navigate('/interview')
- *
- * Token is written to sessionStorage via setAuth() so it survives
- * React re-renders and Vite HMR module resets.
+ * Step 1: Face capture (webcam snapshot)
+ * Step 2: Voice recording (8 s) ← NEW
+ * Step 3: TOTP code → POST /auth/login → store token → navigate('/interview')
  */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api, { setAuth } from '../utils/api'
 import styles from './Login.module.css'
 
-// ── Step indicator ────────────────────────────────────────────────────────────
+// ─── Step bar ─────────────────────────────────────────────────────────────────
 function StepBar({ current }) {
-  const labels = ['Face', 'TOTP']
+  const labels = ['Face', 'Voice', 'TOTP']
   return (
     <div className="steps" style={{ marginBottom: 28 }}>
       {labels.map((label, i) => {
@@ -35,43 +33,175 @@ function StepBar({ current }) {
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Voice recorder (reused from Enrollment) ─────────────────────────────────
+function VoiceRecorder({ onDone }) {
+  const mediaRef    = useRef(null)
+  const chunksRef   = useRef([])
+  const timerRef    = useRef(null)
+  const animRef     = useRef(null)
+  const analyserRef = useRef(null)
+  const ctxRef      = useRef(null)
 
-// ── Component ─────────────────────────────────────────────────────────────────
+  const [phase, setPhase] = useState('idle')   // idle | recording | done | error
+  const [secs,  setSecs]  = useState(8)
+  const [bars,  setBars]  = useState(Array(20).fill(3))
+  const [blob,  setBlob]  = useState(null)
+  const [error, setError] = useState('')
+
+  const animateWave = useCallback(() => {
+    if (!analyserRef.current) return
+    const data = new Uint8Array(analyserRef.current.frequencyBinCount)
+    analyserRef.current.getByteFrequencyData(data)
+    const step = Math.floor(data.length / 20)
+    setBars(Array.from({ length: 20 }, (_, i) => Math.max(3, Math.round(((data[i * step] || 0) / 255) * 48))))
+    animRef.current = requestAnimationFrame(animateWave)
+  }, [])
+
+  const start = async () => {
+    setError(''); setBlob(null); chunksRef.current = []
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+
+      const audioCtx  = new (window.AudioContext || window.webkitAudioContext)()
+      ctxRef.current  = audioCtx
+      const analyser  = audioCtx.createAnalyser(); analyser.fftSize = 256
+      audioCtx.createMediaStreamSource(stream).connect(analyser)
+      analyserRef.current = analyser
+      animRef.current = requestAnimationFrame(animateWave)
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : ''
+
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+      mediaRef.current = rec
+      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      rec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop())
+        cancelAnimationFrame(animRef.current)
+        audioCtx.close()
+        setBars(Array(20).fill(3))
+        const b = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' })
+        setBlob(b); setPhase('done')
+      }
+
+      rec.start(100); setPhase('recording')
+      let rem = 8; setSecs(rem)
+      timerRef.current = setInterval(() => {
+        rem -= 1; setSecs(rem)
+        if (rem <= 0) { clearInterval(timerRef.current); rec.stop() }
+      }, 1000)
+    } catch {
+      setError('Microphone access denied. Please allow microphone and try again.')
+      setPhase('error')
+    }
+  }
+
+  const retry = () => {
+    cancelAnimationFrame(animRef.current); clearInterval(timerRef.current)
+    ctxRef.current?.close()
+    setBlob(null); setPhase('idle'); setSecs(8); setBars(Array(20).fill(3)); setError('')
+  }
+
+  useEffect(() => () => {
+    cancelAnimationFrame(animRef.current); clearInterval(timerRef.current)
+    ctxRef.current?.close()
+    mediaRef.current?.stream?.getTracks().forEach(t => t.stop())
+  }, [])
+
+  return (
+    <div>
+      <h2 style={{ marginBottom: 12 }}>🎙️ Voice Verification</h2>
+      <p style={{ color: 'var(--clr-text-muted)', marginBottom: 16 }}>
+        Read the sentence below aloud for <strong>8 seconds</strong>:
+      </p>
+
+      <div style={{
+        background: 'var(--clr-surface-2)', border: '1px solid var(--clr-border)',
+        borderRadius: 'var(--r-md)', padding: '12px 16px', marginBottom: 20,
+        fontStyle: 'italic', color: 'var(--clr-text)', lineHeight: 1.6,
+      }}>
+        "My name is [your name] and I confirm my identity for the MIIC secure interview platform."
+      </div>
+
+      {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
+
+      {/* Waveform */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, height: 56, marginBottom: 16 }}>
+        {bars.map((h, i) => (
+          <div key={i} style={{
+            width: 6, height: h, borderRadius: 3,
+            background: phase === 'recording'
+              ? `hsl(${160 + i * 3}, 80%, 55%)`
+              : phase === 'done' ? 'var(--clr-success)' : 'var(--clr-surface-3, var(--clr-border))',
+            transition: 'height 0.08s ease',
+          }} />
+        ))}
+      </div>
+
+      <div style={{ textAlign: 'center', marginBottom: 20, minHeight: 24 }}>
+        {phase === 'idle'      && <span style={{ color: 'var(--clr-text-muted)' }}>Press Start Recording below</span>}
+        {phase === 'recording' && <span style={{ color: 'var(--clr-success)', fontWeight: 600 }}>🔴 Recording… {secs}s remaining</span>}
+        {phase === 'done'      && <span style={{ color: 'var(--clr-success)', fontWeight: 600 }}>✅ Voice recorded!</span>}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        {phase === 'idle' && (
+          <button className="btn btn-primary" onClick={start} style={{ flex: 1 }}>🎙️ Start Recording</button>
+        )}
+        {phase === 'recording' && (
+          <button className="btn btn-ghost" disabled style={{ flex: 1 }}>
+            <span className="spinner" style={{ marginRight: 8 }} />Recording… {secs}s
+          </button>
+        )}
+        {(phase === 'done' || phase === 'error') && (
+          <button className="btn btn-ghost" onClick={retry} style={{ flex: 1 }}>🔄 Re-record</button>
+        )}
+        {phase === 'done' && (
+          <button className="btn btn-success" onClick={() => onDone(blob)} style={{ flex: 1 }}>Continue →</button>
+        )}
+      </div>
+
+      <p style={{ marginTop: 16, fontSize: '0.78rem', color: 'var(--clr-text-muted)', textAlign: 'center' }}>
+        If your account has no voice enrolled, this step will be skipped automatically.{' '}
+        <button
+          onClick={() => onDone(null)}
+          style={{ background: 'none', border: 'none', color: 'var(--clr-primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 }}
+        >
+          Skip
+        </button>
+      </p>
+    </div>
+  )
+}
+
+// ─── Main Login component ─────────────────────────────────────────────────────
 export default function Login() {
   const navigate = useNavigate()
 
-  // Pre-fill candidate ID from enrollment if available
-  const [candidateId, setCandidateId] = useState(
-    () => localStorage.getItem('lastCandidateId') || ''
-  )
+  const [candidateId, setCandidateId] = useState(() => localStorage.getItem('lastCandidateId') || '')
   const [step,        setStep]        = useState(0)
   const [faceBlob,    setFaceBlob]    = useState(null)
+  const [voiceBlob,   setVoiceBlob]   = useState(null)  // ← NEW
   const [totpCode,    setTotpCode]    = useState('')
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
 
-  // Camera
   const videoRef  = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
-  const [camOn, setCamOn] = useState(false)
+  const [camOn,   setCamOn]   = useState(false)
+  const doneRef   = useRef(false)
 
-  // Prevent double-submit
-  const doneRef = useRef(false)
-
-  // ── Camera ──────────────────────────────────────────────────────────────────
+  // ── Camera helpers ──────────────────────────────────────────────────────────
   const startCam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })
       videoRef.current.srcObject = stream
       streamRef.current = stream
       await videoRef.current.play()
-      setCamOn(true)
-      setError('')
-    } catch {
-      setError('Camera access denied.')
-    }
+      setCamOn(true); setError('')
+    } catch { setError('Camera access denied.') }
   }
 
   const stopCam = () => {
@@ -87,56 +217,49 @@ export default function Login() {
     c.toBlob(blob => {
       setFaceBlob(blob)
       stopCam()
-      setStep(2)       // → TOTP step
+      setStep(2)          // → Voice step
     }, 'image/jpeg', 0.9)
   }
 
-  // Start cam when step 1 mounts
   useEffect(() => { if (step === 1) startCam() }, [step]) // eslint-disable-line
+  useEffect(() => () => stopCam(), [])                     // eslint-disable-line
 
-  // Cleanup cam on unmount
-  useEffect(() => () => stopCam(), []) // eslint-disable-line
-
-  // ── Submit ───────────────────────────────────────────────────────────────────
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const submit = async () => {
     if (doneRef.current) return
     if (totpCode.length !== 6) { setError('Enter the 6-digit TOTP code.'); return }
-
     doneRef.current = true
-    setError('')
-    setLoading(true)
+    setError(''); setLoading(true)
 
     try {
       const fd = new FormData()
       fd.append('candidate_id', candidateId.trim())
-      fd.append('face_image',   faceBlob,  'face.jpg')
+      fd.append('face_image',   faceBlob, 'face.jpg')
       fd.append('totp_code',    totpCode)
+      if (voiceBlob && voiceBlob.size > 1000) {
+        fd.append('voice_audio', voiceBlob, 'voice_login.webm')
+      }
 
       const { data } = await api.post('/auth/login', fd)
-      console.log('[Login] Response OK:', data)
 
-      // Write token + session to sessionStorage BEFORE navigating
       setAuth({
         token:       data.access_token,
         sessionId:   data.session_id,
         candidateId: candidateId.trim(),
       })
-      console.log('[Login] Auth stored, navigating to /interview…')
 
-      // Hard redirect — completely unmounts Login and mounts Interview
       window.location.href = '/interview'
 
     } catch (e) {
-      doneRef.current = false   // allow retry
-      console.error('[Login] Error:', e.response?.data || e.message)
+      doneRef.current = false
       const detail = e.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Login failed. Check console for details.')
+      setError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Login failed.')
     } finally {
       setLoading(false)
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="page-center">
       <div className="card" style={{ width: '100%', maxWidth: 480 }}>
@@ -197,8 +320,20 @@ export default function Login() {
           </div>
         )}
 
-        {/* ── Step 2: TOTP ── */}
+        {/* ── Step 2: Voice ── */}
         {step === 2 && (
+          <div className={styles.stepSlide}>
+            <VoiceRecorder
+              onDone={(blob) => {
+                setVoiceBlob(blob)
+                setStep(3)
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── Step 3: TOTP ── */}
+        {step === 3 && (
           <div className={styles.stepSlide}>
             <h2 style={{ marginBottom: 12 }}>🔐 Enter TOTP Code</h2>
             <p style={{ color: 'var(--clr-text-muted)', marginBottom: 16 }}>

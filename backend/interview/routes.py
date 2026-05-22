@@ -633,7 +633,7 @@ async def end_interview(
     except KeyError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    # Stop emotion analysis thread
+    # ── Stop emotion analysis thread ─────────────────────────────
     stop_ev = _stop_events.pop(session_id, None)
     if stop_ev:
         stop_ev.set()
@@ -641,16 +641,16 @@ async def end_interview(
     _audio_queues.pop(session_id, None)
     _emotion_threads.pop(session_id, None)
 
-    # Update session status in DB
-    db_session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-    if db_session:
+    # ── Update session status in DB ───────────────────────────────
+    db_session_row = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if db_session_row:
         from datetime import datetime, timezone
-        db_session.status      = "COMPLETED"
-        db_session.final_score = final["average_score"]
-        db_session.ended_at    = datetime.now(timezone.utc)
+        db_session_row.status      = "COMPLETED"
+        db_session_row.final_score = final["average_score"]
+        db_session_row.ended_at    = datetime.now(timezone.utc)
         db.commit()
 
-    # Audit log
+    # ── Audit log ────────────────────────────────────────────────
     log_event(
         session_id = session_id,
         event_type = "INTERVIEW_COMPLETED",
@@ -664,13 +664,27 @@ async def end_interview(
         db_session = db,
     )
 
-    # Actually generate and sign the report file so the frontend can download/view it
+    # ── Generate and sign the report ──────────────────────────────
+    # IMPORTANT: end_session() already popped the session from session_store,
+    # so we pass final data directly via a temporary completed-sessions dict.
     try:
-        generate_full_report(session_id, db, emotion_result_store, session_store)
+        # Temporarily store final data so report_signer can read extended fields
+        _completed_data = {
+            session_id: {
+                "scores":              final.get("scores", []),
+                "interview_mode":      final.get("interview_mode", "topic"),
+                "selected_topics":     final.get("topics_covered", []),
+                "time_taken_minutes":  final.get("time_taken_minutes", 0),
+                "detailed_feedback":   final.get("detailed_feedback", {}),
+                "job_role":            "",  # already used in LLM summary
+            }
+        }
+        generate_full_report(session_id, db, emotion_result_store, _completed_data)
     except Exception as exc:
-        logger.error(f"Failed to generate report for {session_id}: {exc}")
+        logger.error("Failed to generate report for %s: %s", session_id, exc)
 
     return final
+
 
 
 # ═══════════════════════════════════════════════════════════════════

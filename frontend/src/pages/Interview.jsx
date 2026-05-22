@@ -465,7 +465,21 @@ export default function Interview() {
 
   // Tab-switch detection
   useEffect(() => {
-    const onVis = () => { if (document.hidden && config) pushAlert('⚠️ Tab switch detected', 'warning') }
+    const onVis = async () => {
+      if (document.hidden && config) {
+        pushAlert('⚠️ Tab switch detected', 'warning')
+        // Notify backend — counter triggers warning/terminate logic
+        try {
+          const res = await api.post('/security/tab-switch', {
+            timestamp: new Date().toISOString(),
+          })
+          if (res.data?.terminated) {
+            // Backend terminated — WS will push SESSION_TERMINATED event
+            pushAlert('🚨 Session terminated due to excessive tab switches', 'danger')
+          }
+        } catch { /* silently ignore network errors */ }
+      }
+    }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [config])

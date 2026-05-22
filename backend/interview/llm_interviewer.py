@@ -6,6 +6,7 @@ Ollama endpoint: http://localhost:11434
 Models tried in order: qwen2.5:7b → qwen2.5:3b (matches config.py)
 """
 
+import logging
 import re
 import json
 import uuid
@@ -19,6 +20,8 @@ from interview.adaptive_engine import (
     get_difficulty_prompt,
     get_domain_for_question,
 )
+
+logger = logging.getLogger(__name__)
 
 # ─── In-memory session store ─────────────────────────────────────
 # { session_id: { "history": [], "scores": [],
@@ -223,24 +226,51 @@ def _parse_evaluation(text: str) -> dict:
 # 3. start_session
 # ═══════════════════════════════════════════════════════════════════
 
-def start_session(session_id: str, job_role: str) -> dict:
+def start_session(
+    session_id: str,
+    job_role: str,
+    max_questions: int = 10,
+    time_limit_minutes: int = 20,
+    resume_context: str = "",
+    selected_topics: list = None,
+    interview_mode: str = "topic",
+) -> dict:
     """
     Initialise a new interview session and obtain the first question from the LLM.
 
     Args:
-        session_id: Unique identifier for this interview session.
-        job_role:   Role the candidate is applying for (e.g. "Backend Engineer").
+        session_id:          Unique identifier for this interview session.
+        job_role:            Role the candidate is applying for.
+        max_questions:       Maximum number of questions (default 10).
+        time_limit_minutes:  Time limit in minutes (default 20).
+        resume_context:      Pre-parsed resume text for resume/combined modes.
+        selected_topics:     List of topic IDs for topic/combined modes.
+        interview_mode:      "topic" | "resume" | "combined"
 
     Returns:
-        {
-            "session_id": str,
-            "first_question": str,
-            "difficulty": "medium"
-        }
+        { session_id, first_question, difficulty, max_questions,
+          time_limit_minutes, interview_mode, selected_topics }
     """
+    import time as _time
+
+    selected_topics = selected_topics or []
+
+    # Build topic hint for the system prompt
+    topic_hint = ""
+    if selected_topics and interview_mode in ("topic", "combined"):
+        topic_hint = f" Focus on these topics: {', '.join(selected_topics)}."
+
+    # Build resume hint
+    resume_hint = ""
+    if resume_context and interview_mode in ("resume", "combined"):
+        excerpt = resume_context[:600]
+        resume_hint = f" The candidate's resume says: {excerpt}"
+
     system_prompt = (
-        f"You are a strict technical interviewer for a {job_role} position. "
-        "Ask exactly ONE technical question at a time. "
+        f"You are a strict technical interviewer for a {job_role} position."
+        f"{topic_hint}{resume_hint} "
+        f"Ask exactly ONE technical question at a time. "
+        f"You have {max_questions} questions total. "
         "Start with a medium difficulty question. "
         "Wait for the candidate response before evaluating. "
         "Never reveal answers. Be professional and concise."
@@ -261,18 +291,28 @@ def start_session(session_id: str, job_role: str) -> dict:
 
     # Initialise session entry
     session_store[session_id] = {
-        "history": [{"role": "assistant", "content": first_question}],
-        "scores": [],
-        "difficulty": "medium",
-        "question_count": 1,
-        "job_role": job_role,
-        "system_prompt": system_prompt,
+        "history":             [{"role": "assistant", "content": first_question}],
+        "scores":              [],
+        "difficulty":          "medium",
+        "question_count":      1,
+        "max_questions":       max_questions,
+        "time_limit_minutes":  time_limit_minutes,
+        "job_role":            job_role,
+        "system_prompt":       system_prompt,
+        "interview_mode":      interview_mode,
+        "selected_topics":     selected_topics,
+        "resume_context":      resume_context,
+        "started_at":          _time.time(),
     }
 
     return {
-        "session_id": session_id,
-        "first_question": first_question,
-        "difficulty": "medium",
+        "session_id":          session_id,
+        "first_question":      first_question,
+        "difficulty":          "medium",
+        "max_questions":       max_questions,
+        "time_limit_minutes":  time_limit_minutes,
+        "interview_mode":      interview_mode,
+        "selected_topics":     selected_topics,
     }
 
 
@@ -295,7 +335,8 @@ def submit_response(session_id: str, candidate_response: str) -> dict:
             "feedback": str,
             "next_question": str,
             "difficulty": str,
-            "question_number": int
+            "question_number": int,
+            "auto_end": bool   ← True when max_questions reached
         }
 
     Raises:
@@ -314,16 +355,28 @@ def submit_response(session_id: str, candidate_response: str) -> dict:
     domain = get_domain_for_question(next_q_number)
     diff_prompt = get_difficulty_prompt(state["difficulty"], domain)
 
-    # Build evaluation prompt appended as a system instruction
-    evaluation_instruction = (
-        "Evaluate the above response. Give a score 0-10. "
-        "Then ask the next question. "
-        f"For the next question: {diff_prompt} "
-        "Format your response EXACTLY as:\n"
-        "SCORE: <number>\n"
-        "FEEDBACK: <one sentence>\n"
-        "NEXT_QUESTION: <question>"
-    )
+    max_questions = state.get("max_questions", 10)
+
+    # Build evaluation prompt — if last question, tell LLM to close off
+    if state["question_count"] >= max_questions:
+        evaluation_instruction = (
+            "Evaluate the above response. Give a score 0-10. "
+            "This was the final question, so do NOT ask another question. "
+            "Format your response EXACTLY as:\n"
+            "SCORE: <number>\n"
+            "FEEDBACK: <one sentence>\n"
+            "NEXT_QUESTION: Thank you for completing the interview."
+        )
+    else:
+        evaluation_instruction = (
+            "Evaluate the above response. Give a score 0-10. "
+            "Then ask the next question. "
+            f"For the next question: {diff_prompt} "
+            "Format your response EXACTLY as:\n"
+            "SCORE: <number>\n"
+            "FEEDBACK: <one sentence>\n"
+            "NEXT_QUESTION: <question>"
+        )
 
     # Build messages: system → full history → evaluation instruction
     messages = [{"role": "system", "content": state["system_prompt"]}]
@@ -338,16 +391,21 @@ def submit_response(session_id: str, candidate_response: str) -> dict:
     new_difficulty = adjust_difficulty(state["difficulty"], state["scores"])
     state["difficulty"] = new_difficulty
 
-    # Store assistant's reply in history (the full evaluation text)
+    # Store assistant's reply in history
     state["history"].append({"role": "assistant", "content": raw_reply})
     state["question_count"] += 1
 
+    # Check if we have reached the max questions limit
+    auto_end = state["question_count"] > max_questions
+
     return {
-        "score": parsed["score"],
-        "feedback": parsed["feedback"],
-        "next_question": parsed["next_question"],
-        "difficulty": new_difficulty,
+        "score":           parsed["score"],
+        "feedback":        parsed["feedback"],
+        "next_question":   parsed["next_question"],
+        "difficulty":      new_difficulty,
         "question_number": state["question_count"],
+        "auto_end":        auto_end,
+        "questions_remaining": max(0, max_questions - state["question_count"]),
     }
 
 
@@ -369,16 +427,14 @@ def end_session(session_id: str) -> dict:
         session_id: UUID of the session to close.
 
     Returns:
-        {
-            "average_score": float,
-            "recommendation": str,
-            "total_questions": int,
-            "scores": list
-        }
+        { average_score, recommendation, total_questions, scores,
+          interview_mode, topics_covered, time_taken_minutes, detailed_feedback }
 
     Raises:
         KeyError: If session_id is not found.
     """
+    import time as _time
+
     if session_id not in session_store:
         raise KeyError(f"Session '{session_id}' not found.")
 
@@ -397,9 +453,72 @@ def end_session(session_id: str) -> dict:
     else:
         recommendation = "REJECT"
 
+    # Compute time taken
+    started_at = state.get("started_at", _time.time())
+    time_taken_minutes = round((_time.time() - started_at) / 60, 1)
+
+    # Generate detailed LLM feedback summary
+    detailed_feedback = {
+        "strengths": [],
+        "weaknesses": [],
+        "topics_to_study": [],
+        "overall_assessment": "",
+    }
+    try:
+        history_text = "\n".join(
+            f"{m['role'].upper()}: {m['content'][:300]}"
+            for m in state.get("history", [])[-20:]  # last 20 messages
+        )
+        feedback_prompt = (
+            f"Based on this interview for a {state.get('job_role', 'Software Engineer')} role "
+            f"(average score: {average_score}/10, recommendation: {recommendation}), "
+            "provide a structured summary with:\n"
+            "STRENGTHS: (3 bullet points)\n"
+            "WEAKNESSES: (3 bullet points)\n"
+            "TOPICS_TO_STUDY: (3 topics)\n"
+            "OVERALL_ASSESSMENT: (2-3 sentences)\n\n"
+            f"Interview transcript excerpt:\n{history_text}"
+        )
+        fb_messages = [
+            {"role": "system", "content": "You are a senior hiring manager writing a post-interview feedback report."},
+            {"role": "user", "content": feedback_prompt},
+        ]
+        fb_text = _chat(fb_messages)
+
+        # Parse feedback
+        current_key = None
+        for line in fb_text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            upper = stripped.upper()
+            if upper.startswith("STRENGTHS:"):
+                current_key = "strengths"
+            elif upper.startswith("WEAKNESSES:"):
+                current_key = "weaknesses"
+            elif upper.startswith("TOPICS_TO_STUDY:"):
+                current_key = "topics_to_study"
+            elif upper.startswith("OVERALL_ASSESSMENT:"):
+                current_key = "overall_assessment"
+                rest = stripped[19:].strip()
+                if rest:
+                    detailed_feedback["overall_assessment"] = rest
+            elif current_key in ("strengths", "weaknesses", "topics_to_study"):
+                clean = stripped.lstrip("-•*123456789. ").strip()
+                if clean:
+                    detailed_feedback[current_key].append(clean)
+            elif current_key == "overall_assessment" and stripped:
+                detailed_feedback["overall_assessment"] += " " + stripped
+    except Exception as exc:
+        logger.warning("Could not generate detailed feedback: %s", exc)
+
     return {
-        "average_score": average_score,
-        "recommendation": recommendation,
-        "total_questions": state["question_count"],
-        "scores": scores,
+        "average_score":       average_score,
+        "recommendation":      recommendation,
+        "total_questions":     state["question_count"],
+        "scores":              scores,
+        "interview_mode":      state.get("interview_mode", "topic"),
+        "topics_covered":      state.get("selected_topics", []),
+        "time_taken_minutes":  time_taken_minutes,
+        "detailed_feedback":   detailed_feedback,
     }

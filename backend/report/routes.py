@@ -60,8 +60,12 @@ async def generate_report(
 # ═════════════════════════════════════════════════════════════════════════════
 
 @router.get("/{session_id}")
-async def get_report(session_id: str):
-    """Return the full signed report JSON for a given session."""
+async def get_report(
+    session_id: str,
+    payload: dict = Depends(_get_payload),
+):
+    """Return the full signed report JSON for a given session. Requires auth."""
+    # Only the owner or anyone with a valid token (recruiter) can read
     path = _report_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Report not found")
@@ -74,8 +78,11 @@ async def get_report(session_id: str):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @router.get("/{session_id}/verify")
-async def verify_report(session_id: str):
-    """Verify the RSA signature of a saved report."""
+async def verify_report(
+    session_id: str,
+    payload: dict = Depends(_get_payload),
+):
+    """Verify the RSA signature of a saved report. Requires auth."""
     path = _report_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Report not found")
@@ -88,8 +95,11 @@ async def verify_report(session_id: str):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @router.get("/{session_id}/download")
-async def download_report(session_id: str):
-    """Return the report file as a downloadable attachment."""
+async def download_report(
+    session_id: str,
+    payload: dict = Depends(_get_payload),
+):
+    """Return the report file as a downloadable attachment. Requires auth."""
     path = _report_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Report not found")

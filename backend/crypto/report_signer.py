@@ -139,6 +139,13 @@ def collect_session_data(
         scores = store_state["scores"]
         average_score = round(sum(scores) / len(scores), 2) if scores else 0.0
 
+    # ── Extended interview metadata from store ────────────────────────────────
+    interview_mode      = store_state.get("interview_mode", "topic")
+    topics_covered      = store_state.get("selected_topics", [])
+    time_taken_minutes  = store_state.get("time_taken_minutes", None)
+    detailed_feedback   = store_state.get("detailed_feedback", {})
+    total_questions     = store_state.get("question_count", len(interview_scores))
+
     return {
         "report_id":          str(uuid.uuid4()),
         "session_id":         session_id,
@@ -153,7 +160,14 @@ def collect_session_data(
         "emotion_timeseries": emotion_timeseries,
         "security_events":    security_events,
         "audit_chain_valid":  audit_chain_valid,
+        # Extended fields — used by Report.jsx
+        "interview_mode":     interview_mode,
+        "topics_covered":     topics_covered,
+        "time_taken_minutes": time_taken_minutes,
+        "total_questions":    total_questions,
+        "detailed_feedback":  detailed_feedback,
     }
+
 
 
 # ═════════════════════════════════════════════════════════════════════════════
