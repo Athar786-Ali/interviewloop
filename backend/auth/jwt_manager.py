@@ -5,7 +5,8 @@ RS256-based JWT creation and verification using RSA keypair.
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 import config
@@ -122,3 +123,25 @@ def get_current_candidate(token: str) -> dict:
         )
 
     return payload
+
+
+# ── Reusable FastAPI Bearer dependency ───────────────────────────────
+_bearer_scheme = HTTPBearer(auto_error=True)
+
+
+def get_token_payload(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> dict:
+    """
+    FastAPI dependency — extracts the Bearer token from the Authorization
+    header and returns the verified JWT payload.
+
+    Import this wherever you need a protected endpoint:
+
+        from auth.jwt_manager import get_token_payload
+
+        @router.get("/protected")
+        async def protected(payload: dict = Depends(get_token_payload)):
+            candidate_id = payload["candidate_id"]
+    """
+    return get_current_candidate(credentials.credentials)
