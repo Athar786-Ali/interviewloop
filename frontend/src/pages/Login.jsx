@@ -248,7 +248,7 @@ export default function Login() {
         candidateId: candidateId.trim(),
       })
 
-      window.location.href = '/interview'
+      window.location.href = '/dashboard'
 
     } catch (e) {
       doneRef.current = false

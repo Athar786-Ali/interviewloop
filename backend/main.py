@@ -31,10 +31,11 @@ from fastapi.responses import JSONResponse
 from database import init_db
 
 # ─── Routers ─────────────────────────────────────────────────────────────────
-from auth.routes      import router as auth_router
-from interview.routes import router as interview_router
-from security.routes  import router as security_router
-from report.routes    import router as report_router
+from auth.routes        import router as auth_router
+from interview.routes   import router as interview_router
+from interview.dashboard import router as dashboard_router
+from security.routes    import router as security_router
+from report.routes      import router as report_router
 
 # ─── WebSocket Manager ───────────────────────────────────────────────────────
 from websocket.ws_manager import manager as ws_manager
@@ -194,6 +195,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(interview_router)
+app.include_router(dashboard_router)
 app.include_router(security_router)
 app.include_router(report_router)
 app.include_router(verify_router)

@@ -24,9 +24,9 @@ from database import AuditLog, InterviewLog, Session as DBSession
 import config
 
 # ─── Recommendation thresholds ────────────────────────────────────────────────
-HIRE_THRESHOLD   = 7.5   # average_score >= 7.5 → HIRE
-REVIEW_THRESHOLD = 5.0   # average_score >= 5.0 → REVIEW
-                          # otherwise           → REJECT
+EXCELLENT_THRESHOLD    = 7.5   # average_score >= 7.5 → EXCELLENT
+NEEDS_PRACTICE_THRESHOLD = 5.0 # average_score >= 5.0 → NEEDS PRACTICE
+                                # otherwise            → POOR
 
 REPORTS_DIR = Path("reports")
 
@@ -86,12 +86,12 @@ def collect_session_data(
     average_score = round(sum(scores) / len(scores), 2) if scores else 0.0
 
     # ── Recommendation ────────────────────────────────────────────────────────
-    if average_score >= HIRE_THRESHOLD:
-        recommendation = "HIRE"
-    elif average_score >= REVIEW_THRESHOLD:
-        recommendation = "REVIEW"
+    if average_score >= EXCELLENT_THRESHOLD:
+        recommendation = "EXCELLENT"
+    elif average_score >= NEEDS_PRACTICE_THRESHOLD:
+        recommendation = "NEEDS PRACTICE"
     else:
-        recommendation = "REJECT"
+        recommendation = "POOR"
 
     # ── Audit log entries ─────────────────────────────────────────────────────
     audit_entries = get_session_audit_log(session_id, db_session)

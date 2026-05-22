@@ -14,6 +14,7 @@ import './index.css'
 
 import Enrollment from './pages/Enrollment'
 import Login      from './pages/Login'
+import Dashboard  from './pages/Dashboard'
 import Interview  from './pages/Interview'
 import Report     from './pages/Report'
 import { isAuthenticated } from './utils/api'
@@ -35,6 +36,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Route path="/login"  element={<Login />} />
 
       {/* Protected — requires sessionStorage token */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute><Dashboard /></ProtectedRoute>
+      } />
       <Route path="/interview" element={
         <ProtectedRoute><Interview /></ProtectedRoute>
       } />

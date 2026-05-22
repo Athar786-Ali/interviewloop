@@ -1,24 +1,54 @@
 import React, { useEffect, useRef, useState } from 'react'
 import api from '../utils/api'
 
+// ── Interview mode options ─────────────────────────────────────────────────────
 const MODES = [
   { id: 'topic',    icon: '📚', label: 'Topic Based',  desc: 'Select CS topics for your interview' },
   { id: 'resume',   icon: '📄', label: 'Resume Based', desc: 'Questions from your PDF resume' },
   { id: 'combined', icon: '🔗', label: 'Combined',     desc: 'Resume + selected topics together' },
 ]
 
+// ── Company AI Persona options ─────────────────────────────────────────────────
+const COMPANY_TARGETS = [
+  {
+    id: 'service',
+    icon: '🏢',
+    label: 'Service Based',
+    sub:   'TCS / Wipro / Infosys',
+    desc:  'CS fundamentals, OOP basics, SQL, verbal logic',
+    color: '#60a5fa',
+  },
+  {
+    id: 'product',
+    icon: '🚀',
+    label: 'Product / FAANG',
+    sub:   'Google / Amazon / Microsoft',
+    desc:  'Deep CS, system design, optimal complexity, cross-questioning',
+    color: '#a78bfa',
+  },
+  {
+    id: 'startup',
+    icon: '⚡',
+    label: 'Startup',
+    sub:   'Fast-paced, project-heavy',
+    desc:  'Practical skills, framework knowledge, real-world problem solving',
+    color: '#34d399',
+  },
+]
+
 export default function InterviewSetup({ onStart }) {
-  const [mode,       setMode]       = useState('topic')
-  const [topics,     setTopics]     = useState([])
-  const [selected,   setSelected]   = useState([])
-  const [jobRole,    setJobRole]    = useState('Software Engineering')
-  const [maxQ,       setMaxQ]       = useState(10)
-  const [timeLimit,  setTimeLimit]  = useState(20)
-  const [resumeCtx,  setResumeCtx]  = useState('')
-  const [resumeInfo, setResumeInfo] = useState(null)
-  const [uploading,  setUploading]  = useState(false)
-  const [loading,    setLoading]    = useState(false)
-  const [error,      setError]      = useState('')
+  const [mode,          setMode]          = useState('topic')
+  const [companyTarget, setCompanyTarget] = useState('product')
+  const [topics,        setTopics]        = useState([])
+  const [selected,      setSelected]      = useState([])
+  const [jobRole,       setJobRole]       = useState('Software Engineering')
+  const [maxQ,          setMaxQ]          = useState(10)
+  const [timeLimit,     setTimeLimit]     = useState(20)
+  const [resumeCtx,     setResumeCtx]    = useState('')
+  const [resumeInfo,    setResumeInfo]   = useState(null)
+  const [uploading,     setUploading]    = useState(false)
+  const [loading,       setLoading]      = useState(false)
+  const [error,         setError]        = useState('')
   const fileRef = useRef()
 
   useEffect(() => {
@@ -43,7 +73,6 @@ export default function InterviewSetup({ onStart }) {
     } catch (err) {
       setError(err.response?.data?.detail || 'Resume upload failed.')
     } finally { setUploading(false) }
-    // reset so same file can be re-selected
     e.target.value = ''
   }
 
@@ -65,6 +94,7 @@ export default function InterviewSetup({ onStart }) {
       fd.append('interview_mode',     mode)
       fd.append('selected_topics',    JSON.stringify(selected))
       fd.append('resume_context',     resumeCtx)
+      fd.append('company_target',     companyTarget)   // ← NEW
       const { data } = await api.post('/interview/start', fd)
       onStart(data)
     } catch (err) {
@@ -77,7 +107,7 @@ export default function InterviewSetup({ onStart }) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px 64px' }}>
-      <div style={{ width: '100%', maxWidth: 620 }}>
+      <div style={{ width: '100%', maxWidth: 640 }}>
 
         {/* Header */}
         <div className="page-header" style={{ justifyContent: 'center', marginBottom: 24 }}>
@@ -88,6 +118,44 @@ export default function InterviewSetup({ onStart }) {
         {error && (
           <div className="alert alert-danger" style={{ marginBottom: 20 }}>{error}</div>
         )}
+
+        {/* ── Company AI Persona ── */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 6px', fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--clr-text-muted)' }}>
+            Company Target
+          </h3>
+          <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--clr-text-muted)', lineHeight: 1.4 }}>
+            Choose the company type to tailor the AI interviewer's style and question depth.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+            {COMPANY_TARGETS.map(c => {
+              const isActive = companyTarget === c.id
+              return (
+                <div
+                  key={c.id}
+                  id={`company-${c.id}`}
+                  onClick={() => setCompanyTarget(c.id)}
+                  style={{
+                    padding: '14px 16px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                    border: `2px solid ${isActive ? c.color : 'var(--clr-border)'}`,
+                    background: isActive ? `${c.color}18` : 'var(--clr-surface-2)',
+                    transition: 'all 0.18s',
+                  }}
+                >
+                  <div style={{ fontSize: '1.6rem', marginBottom: 6 }}>{c.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 2, color: isActive ? c.color : 'var(--clr-text)' }}>
+                    {c.label}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--clr-text-muted)', marginBottom: 6 }}>{c.sub}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--clr-text-muted)', lineHeight: 1.4 }}>{c.desc}</div>
+                  {isActive && (
+                    <div style={{ marginTop: 8, fontSize: '0.72rem', color: c.color, fontWeight: 700 }}>✓ Selected</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
         {/* ── Mode selector ── */}
         <div className="card" style={{ marginBottom: 16 }}>
@@ -245,13 +313,14 @@ export default function InterviewSetup({ onStart }) {
         {/* ── Start button ── */}
         {!canStart() && (
           <div style={{ fontSize: '0.82rem', color: 'var(--clr-text-muted)', textAlign: 'center', marginBottom: 10 }}>
-            {mode === 'topic' && selected.length === 0 && '⬆ Select at least one topic to continue'}
-            {mode === 'resume' && !resumeCtx && '⬆ Upload your resume to continue'}
-            {mode === 'combined' && !resumeCtx && '⬆ Upload your resume'}
-            {mode === 'combined' && resumeCtx && selected.length === 0 && '⬆ Select at least one topic'}
+            {mode === 'topic'    && selected.length === 0                    && '⬆ Select at least one topic to continue'}
+            {mode === 'resume'   && !resumeCtx                               && '⬆ Upload your resume to continue'}
+            {mode === 'combined' && !resumeCtx                               && '⬆ Upload your resume'}
+            {mode === 'combined' && resumeCtx && selected.length === 0       && '⬆ Select at least one topic'}
           </div>
         )}
         <button
+          id="start-interview-btn"
           className="btn btn-primary"
           style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 700 }}
           disabled={!canStart() || loading}

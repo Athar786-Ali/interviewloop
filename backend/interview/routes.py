@@ -382,9 +382,10 @@ async def start_interview(
     job_role:            str  = Form("Software Engineering"),
     max_questions:       int  = Form(10),
     time_limit_minutes:  int  = Form(20),
-    interview_mode:      str  = Form("topic"),      # "topic" | "resume" | "combined"
-    selected_topics:     str  = Form("[]"),          # JSON array string e.g. '["os","dbms"]'
-    resume_context:      str  = Form(""),            # pre-parsed context from /upload-resume
+    interview_mode:      str  = Form("topic"),       # "topic" | "resume" | "combined"
+    selected_topics:     str  = Form("[]"),           # JSON array string e.g. '["os","dbms"]'
+    resume_context:      str  = Form(""),             # pre-parsed context from /upload-resume
+    company_target:      str  = Form(""),             # "service" | "product" | "startup"
     payload: dict            = Depends(get_token_payload),
     db: DBSession            = Depends(get_db),
 ):
@@ -424,6 +425,7 @@ async def start_interview(
             resume_context      = resume_context,
             selected_topics     = topics_list,
             interview_mode      = interview_mode,
+            company_target      = company_target,
         )
     except Exception as exc:
         raise HTTPException(
@@ -441,6 +443,7 @@ async def start_interview(
             "mode":           interview_mode,
             "topics":         topics_list,
             "max_questions":  max_questions,
+            "company_target": company_target,
         },
         db_session   = db,
     )
@@ -471,6 +474,7 @@ async def start_interview(
         "time_limit_minutes":  result["time_limit_minutes"],
         "interview_mode":      result["interview_mode"],
         "selected_topics":     result["selected_topics"],
+        "company_target":      result.get("company_target", ""),
         "ollama_status":       "connected",
     }
 

@@ -234,6 +234,7 @@ def start_session(
     resume_context: str = "",
     selected_topics: list = None,
     interview_mode: str = "topic",
+    company_target: str = "",       # e.g. "service", "product", "startup"
 ) -> dict:
     """
     Initialise a new interview session and obtain the first question from the LLM.
@@ -246,10 +247,11 @@ def start_session(
         resume_context:      Pre-parsed resume text for resume/combined modes.
         selected_topics:     List of topic IDs for topic/combined modes.
         interview_mode:      "topic" | "resume" | "combined"
+        company_target:      Company profile: "service" | "product" | "startup"
 
     Returns:
         { session_id, first_question, difficulty, max_questions,
-          time_limit_minutes, interview_mode, selected_topics }
+          time_limit_minutes, interview_mode, selected_topics, company_target }
     """
     import time as _time
 
@@ -266,8 +268,36 @@ def start_session(
         excerpt = resume_context[:600]
         resume_hint = f" The candidate's resume says: {excerpt}"
 
+    # ── Company-specific persona ──────────────────────────────────────────
+    company_hint = ""
+    ct = (company_target or "").lower().strip()
+    if ct in ("service", "service based", "services"):
+        company_hint = (
+            " You are interviewing for a Service-Based IT company (like TCS, Wipro, or Infosys). "
+            "Focus on theoretical CS fundamentals, basic OOP definitions, commonly-asked HR concepts, "
+            "straightforward logic questions, and SQL basics. "
+            "Avoid extremely advanced topics. Keep questions clear and approachable."
+        )
+    elif ct in ("product", "faang", "product based", "product/faang"):
+        company_hint = (
+            " You are interviewing for a top-tier Product-Based or FAANG company (like Google, Amazon, or Microsoft). "
+            "Focus on deep conceptual understanding, algorithmic thinking, edge cases, system design trade-offs, "
+            "and optimal time/space complexity analysis. "
+            "Cross-question the candidate's reasoning. Challenge weak or vague answers. "
+            "Ask follow-up questions to test depth. Expect concise, precise technical answers."
+        )
+    elif ct in ("startup",):
+        company_hint = (
+            " You are interviewing for a fast-paced Startup. "
+            "Focus almost entirely on practical implementation skills, framework-specific knowledge, "
+            "real-world problem solving, and project-based questions from the candidate's resume. "
+            "Ask about trade-offs they made in past projects, how they handle ambiguity, "
+            "and their ability to ship working software quickly. Value pragmatism over theory."
+        )
+
     system_prompt = (
         f"You are a strict technical interviewer for a {job_role} position."
+        f"{company_hint}"
         f"{topic_hint}{resume_hint} "
         f"Ask exactly ONE technical question at a time. "
         f"You have {max_questions} questions total. "
@@ -302,6 +332,7 @@ def start_session(
         "interview_mode":      interview_mode,
         "selected_topics":     selected_topics,
         "resume_context":      resume_context,
+        "company_target":      company_target,
         "started_at":          _time.time(),
     }
 
@@ -313,6 +344,7 @@ def start_session(
         "time_limit_minutes":  time_limit_minutes,
         "interview_mode":      interview_mode,
         "selected_topics":     selected_topics,
+        "company_target":      company_target,
     }
 
 
@@ -446,12 +478,12 @@ def end_session(session_id: str) -> dict:
     else:
         average_score = 0.0
 
-    if average_score >= 7.0:
-        recommendation = "HIRE"
+    if average_score >= 7.5:
+        recommendation = "EXCELLENT"
     elif average_score >= 5.0:
-        recommendation = "REVIEW"
+        recommendation = "NEEDS PRACTICE"
     else:
-        recommendation = "REJECT"
+        recommendation = "POOR"
 
     # Compute time taken
     started_at = state.get("started_at", _time.time())
@@ -521,4 +553,5 @@ def end_session(session_id: str) -> dict:
         "topics_covered":      state.get("selected_topics", []),
         "time_taken_minutes":  time_taken_minutes,
         "detailed_feedback":   detailed_feedback,
+        "company_target":      state.get("company_target", ""),
     }

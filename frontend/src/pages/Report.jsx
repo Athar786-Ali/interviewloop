@@ -14,8 +14,17 @@ function Check({ ok, label }) {
 }
 
 function RecBadge({ rec }) {
-  const cls = rec === 'HIRE' ? 'badge-hire' : rec === 'REVIEW' ? 'badge-review' : 'badge-reject'
-  return <span className={`badge ${cls}`} style={{ fontSize: '0.95rem', padding: '6px 18px' }}>{rec}</span>
+  const cfg = {
+    EXCELLENT:          { cls: 'badge-hire',   label: '🏆 EXCELLENT' },
+    'NEEDS PRACTICE':   { cls: 'badge-review', label: '📈 NEEDS PRACTICE' },
+    POOR:               { cls: 'badge-reject', label: '📉 POOR' },
+    // Legacy (keep for old reports)
+    HIRE:               { cls: 'badge-hire',   label: '✅ HIRE' },
+    REVIEW:             { cls: 'badge-review', label: '🔍 REVIEW' },
+    REJECT:             { cls: 'badge-reject', label: '❌ REJECT' },
+  }
+  const { cls, label } = cfg[rec] || { cls: 'badge-review', label: rec }
+  return <span className={`badge ${cls}`} style={{ fontSize: '0.95rem', padding: '6px 18px' }}>{label}</span>
 }
 
 function SecurityEventIcon({ type }) {
@@ -166,7 +175,7 @@ export default function Report() {
           <div className="logo-mark">🛡</div>
           <h1>Interview Report</h1>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={verifySignature} disabled={verifying}>
             {verifying ? <><span className="spinner" /> Verifying…</> : '🔏 Verify Signature'}
           </button>
@@ -179,6 +188,30 @@ export default function Report() {
             } catch { alert('Download failed. Please try again.') }
           }}>
             ⬇ Download
+          </button>
+          <button
+            id="linkedin-share-btn"
+            className="btn"
+            style={{ background: '#0077b5', color: '#fff', border: 'none' }}
+            onClick={() => {
+              const score = report?.average_score?.toFixed(1) || '—'
+              const rec   = report?.recommendation || ''
+              const emoji = rec === 'EXCELLENT' ? '🏆' : rec === 'NEEDS PRACTICE' ? '📈' : '📊'
+              const text  = encodeURIComponent(
+                `${emoji} Just completed a Verified Proctored Mock Interview on MIIC-Sec!\n\n` +
+                `📊 Score: ${score}/10 — ${rec}\n` +
+                `🔐 5-tier biometric security: Face + Voice + TOTP\n` +
+                `🤖 AI interviewer powered by Qwen2.5\n\n` +
+                `This report is cryptographically signed and tamper-evident.\n` +
+                `#TechInterview #MockInterview #CareerPrep #SoftwareEngineering`
+              )
+              window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${text}`, '_blank')
+            }}
+          >
+            🔗 Share on LinkedIn
+          </button>
+          <button className="btn btn-ghost" onClick={() => window.location.href = '/dashboard'} style={{ marginLeft: 'auto' }}>
+            ← Dashboard
           </button>
         </div>
       </div>
