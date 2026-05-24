@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Deepgram-Real--time%20STT-00E599?style=flat-square&logo=deepgram&logoColor=black" />
   <img src="https://img.shields.io/badge/SQLite-SQLAlchemy-003B57?style=flat-square&logo=sqlite&logoColor=white" />
   <img src="https://img.shields.io/badge/Security-RSA--2048%20%7C%20JWT%20%7C%20TOTP-red?style=flat-square&logo=letsencrypt&logoColor=white" />
+  <img src="https://img.shields.io/badge/Monaco-Editor-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-Private-black?style=flat-square" />
 </p>
 
 <p>
@@ -82,10 +84,17 @@
 - **Hash-Chain Audit Log** — every security event is linked by a SHA-256 hash chain (blockchain-style)
 - **LinkedIn Share Button** — one-click pre-filled post to share your verified interview result
 
-### 💻 Live Code Execution
-- **Multi-Language Sandbox** — write and execute code (Python, JavaScript, Java) directly in the interview
-- **Static Analysis** — checks for bad patterns, complexity issues before execution
-- **Timeout Protection** — 5-second execution limit to prevent infinite loops
+### 💻 Live Code Execution — Monaco Editor
+- **Monaco Editor** (VS Code engine) — same editor used in LeetCode, VSCode, and GitHub Codespaces
+- **4 Languages** — Python 🐍, JavaScript 🟨, Java ☕, C++ ⚙️ — each with persistent independent code slots
+- **VS Code `vs-dark` Theme** — syntax highlighting, bracket pair colorization, indentation guides, minimap
+- **Font Ligatures** — JetBrains Mono / Fira Code / Cascadia Code rendering
+- **Toolbar:**  Language pills · A- / A+ font size · ↺ Reset · ▶ Run (with `Ctrl+Enter` shortcut)
+- **Tab System:** 📝 Code tab ↔ 🖥 Output tab (auto-switches on Run)
+- **Output Panel:** coloured stdout / stderr, execution time (ms), `[HIGH]`/`[MEDIUM]` security analysis warnings
+- **VS Code Status Bar** — blue bar showing language, encoding, tab size, sandbox label
+- **Security Analysis** — Bandit + custom pattern scanner before sandbox execution
+- **Docker Sandbox** — `--network none --memory 128m --cpus 0.5 --read-only` container per run
 
 ### 🏗️ Enterprise-Grade Infrastructure
 - **JWT Authentication** — RS256-signed tokens with session binding
@@ -262,6 +271,7 @@ Breaking any event in the chain breaks all subsequent hashes → tamper-evident 
 | Routing | React Router v6 | Client-side navigation + ProtectedRoute |
 | HTTP Client | Axios | API calls with auth interceptor |
 | Charts | Recharts | Score progress chart, emotion timeline |
+| Code Editor | Monaco Editor (`@monaco-editor/react`) | VS Code-grade in-browser IDE |
 | Auth State | sessionStorage | Tab-scoped token storage (secure) |
 | Styling | Vanilla CSS | Dark glassmorphism design system |
 | Fonts | Google Fonts (Inter) | Premium typography |
@@ -562,14 +572,14 @@ The adaptive engine raises difficulty when recent scores are high, and lowers it
 - [x] Student dashboard with analytics + score progress chart
 - [x] Company-specific AI personas (Service / FAANG / Startup)
 - [x] LinkedIn verified report sharing
-- [x] Live code execution sandbox (Python, JavaScript, Java)
+- [x] Live code execution sandbox (Python, JavaScript, Java, C++)
 - [x] Resume-based adaptive questioning
 - [x] Voice enrollment + login biometrics
+- [x] **Monaco Editor (LeetCode-style)** — VS Code engine with 4 languages, minimap, IntelliSense, Ctrl+Enter run
 - [ ] Public shareable report URLs (dynamic routing)
 - [ ] Multi-user admin panel for batch sessions
 - [ ] Mobile-responsive layout improvements
 - [ ] Docker Compose deployment setup
-- [ ] LeetCode-style code editor (Monaco) integration
 - [ ] Interview recording playback
 - [ ] Email report delivery
 
@@ -581,6 +591,110 @@ The adaptive engine raises difficulty when recent scores are high, and lowers it
 Full-Stack Developer | AI Systems Builder | Security Enthusiast
 
 [![GitHub](https://img.shields.io/badge/GitHub-Athar786--Ali-181717?style=flat-square&logo=github)](https://github.com/Athar786-Ali)
+
+---
+
+## 🖥️ Monaco Editor — Feature Showcase
+
+The in-interview code editor is built with the same Monaco engine that powers **VS Code** and **LeetCode**.
+
+### Editor Toolbar
+```
+[ 🐍 Python 3 ] [ 🟨 JavaScript ] [ ☕ Java ] [ ⚙️ C++ ]    [A-] [14] [A+]    [↺ Reset]    [▶ Run  Ctrl+↵]
+```
+
+### Tab System
+```
+[ 📝 Code ]  [ 🖥 Output ✓ ]                          Python 3 · 12 lines
+─────────────────────────────────────────────────────────────────────
+  Monaco editor (380px, vs-dark, minimap on right)
+─────────────────────────────────────────────────────────────────────
+🐍 Python 3          UTF-8          Tab Size: 4          MIIC-Sec Sandbox
+```
+
+### Output Panel States
+| State | Display |
+|-------|---------|
+| Not run yet | `▶ Press Run or Ctrl+Enter to execute your code` |
+| Running | Animated spinner + `Executing in sandbox…` |
+| Passed | `✅ All Tests Passed · 142ms total · 38ms exec` |
+| Failed | `❌ Runtime Error / Failed` + red stderr output |
+| TLE | `❌ Time Limit Exceeded` |
+| Security warning | `⚠ 1 security warning [HIGH] Use of eval() is forbidden` |
+
+### Keyboard Shortcuts
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Enter` / `Cmd+Enter` | Run code in sandbox |
+| `Ctrl+/` | Toggle line comment |
+| `Ctrl+D` | Select next occurrence |
+| `Alt+↑` / `Alt+↓` | Move line up / down |
+| `Ctrl+Space` | Trigger IntelliSense |
+| `Ctrl+Z` | Undo |
+
+---
+
+## 🛠️ Troubleshooting
+
+### Backend won't start — `ImportError: cannot import name 'get_token_payload'`
+```bash
+# Fixed in commit bf478c5 — pull latest
+git pull origin main
+```
+`get_token_payload` is now exported from `auth/jwt_manager.py` (canonical location).
+
+### Enrollment stuck / taking too long
+- **Expected on first run** — DeepFace downloads ArcFace model (~200 MB) and wav2vec2 downloads from HuggingFace (~360 MB).
+- The UI now shows animated step-by-step progress: Uploading → Face → Voice → TOTP → Saving.
+- Subsequent enrollments take **~10–20 seconds**.
+- Check backend terminal for detailed logs if it fails.
+
+### `InvalidStateError: Cannot close a closed AudioContext`
+- Fixed in latest commit — `retry()` and `useEffect` cleanup now guard with `ctxRef.current.state !== 'closed'` before calling `.close()`.
+
+### Voice recording not working
+- Allow microphone permission in browser settings.
+- Use Chrome or Firefox (Safari has limited `MediaRecorder` support).
+- Check that no other app is exclusively locking the microphone.
+
+### Ollama LLM not responding
+```bash
+# Make sure Ollama is running
+ollama serve
+
+# Check model is pulled
+ollama list
+
+# Pull if missing
+ollama pull qwen2.5:7b
+```
+
+### Face verification fails at login
+- Ensure good, consistent lighting — same conditions as during enrollment.
+- Re-enroll with better photos if verification keeps failing.
+- The threshold is cosine similarity ≥ 0.40 (ArcFace) — adjustable in `config.py`.
+
+### Code sandbox shows "Docker not running"
+```bash
+# Start Docker Desktop, then verify
+docker info
+
+# Pull the Python sandbox image (first use)
+docker pull python:3.11-slim
+```
+
+---
+
+## 🔁 Git History — Key Commits
+
+| Commit | Description |
+|--------|-------------|
+| `bf478c5` | fix: resolve `ImportError` for `get_token_payload` on server startup |
+| `697f2d4` | feat: LeetCode-style Monaco Editor integration (4 langs, minimap, Ctrl+Enter) |
+| `b230b74` | docs: comprehensive professional README |
+| `573105b` | feat: B2C Student Platform — Dashboard, Company AI Personas, LinkedIn Share |
+| `c94cadb` | feat: full bug-fixes + voice authentication implementation |
+| `7f39cc4` | feat: integrated Deepgram real-time voice transcription |
 
 ---
 
