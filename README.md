@@ -698,6 +698,317 @@ docker pull python:3.11-slim
 
 ---
 
+## 🧠 How the Adaptive Engine Works
+
+The adaptive difficulty system is a **sliding-window scoring algorithm** that dynamically adjusts interview pressure in real time.
+
+```
+Candidate answers question
+        │
+        ▼
+LLM scores response (0–10)
+        │
+        ▼
+Score appended to window  ──►  [ 8.5, 7.0, 9.0 ]  (last N answers)
+        │
+        ▼
+Window average computed
+        │
+    ┌───┴────────────────────────────────┐
+    │  avg ≥ 7.5  →  increase difficulty │
+    │  avg ≤ 4.5  →  decrease difficulty │
+    │  4.5–7.5    →  maintain difficulty  │
+    └────────────────────────────────────┘
+        │
+        ▼
+Difficulty tag injected into next LLM prompt
+  ("Ask an easy/medium/hard question about...")
+        │
+        ▼
+Badge shown in UI: [ easy ] / [ medium ] / [ hard ]
+```
+
+**Window size:** 3 answers (configurable in `adaptive_engine.py`)  
+**Difficulty levels:** `easy` → `medium` → `hard`  
+**Effect:** Candidates who perform well are automatically challenged more; struggling candidates get confidence-building questions.
+
+---
+
+## 🔑 Authentication Deep Dive
+
+### JWT Token Anatomy
+```json
+{
+  "candidate_id": "uuid-v4",
+  "session_id":   "uuid-v4",
+  "mfa_passed":   true,
+  "iat": 1716000000,
+  "exp": 1716086400,
+  "alg": "RS256"
+}
+```
+- **Algorithm:** RS256 (asymmetric — only backend can sign, anyone can verify)
+- **Expiry:** Configurable via `JWT_EXPIRY_HOURS` in `config.py`
+- **Storage:** `sessionStorage` (cleared on tab close — not persistent across browser sessions)
+- **Transport:** `Authorization: Bearer <token>` header on every request
+
+### Session State Machine
+```
+PENDING ──► ACTIVE ──► COMPLETED
+               │
+               ├──► TERMINATED  (security violation)
+               └──► ABANDONED   (tab closed / timeout)
+```
+
+### Step-Up Authentication
+If face mismatch is detected **mid-interview**, the session is not immediately terminated. Instead:
+1. WebSocket pushes `STEP_UP_TOTP_REQUIRED` to candidate
+2. A modal overlay appears asking for TOTP code
+3. If verified → session continues (green status)
+4. If failed → `SESSION_TERMINATED` is broadcast
+
+---
+
+## 📈 Dashboard Analytics
+
+The student dashboard (`/dashboard`) provides rich session analytics:
+
+| Metric | Source | Description |
+|--------|--------|-------------|
+| Total Interviews | `Session` table | Count of all completed sessions |
+| Average Score | `InterviewLog` | Mean of all question scores across all sessions |
+| Personal Best | `InterviewLog` | Highest single-session average |
+| Monthly Activity | `Session.started_at` | Sparkline of sessions per month |
+| Score Progress | `InterviewLog` | Per-session average plotted as area chart |
+| Interview History | `Session + AuditLog` | Sortable table with date, mode, score, recommendation |
+
+### Score Chart
+Built with **Recharts** — interactive area chart with:
+- Gradient fill (purple → transparent)
+- Hover tooltips showing session date + score
+- Responsive container (adapts to screen width)
+- Custom dot for each data point
+
+---
+
+## 🎙️ Voice Biometric Pipeline
+
+### Enrollment (8-second recording)
+```
+Browser MediaRecorder (audio/webm;codecs=opus)
+        │
+        ▼
+POST /auth/enroll  [multipart voice_audio field]
+        │
+        ▼
+librosa.load(buffer, sr=16000, mono=True)   ← decode WebM/OGG/WAV
+        │
+        ▼
+wav2vec2-base  →  768-dimensional embedding
+        │
+        ▼
+np.ndarray pickled  →  stored in Candidate.voice_embedding (LargeBinary)
+```
+
+### Verification (login)
+```
+Browser records voice clip
+        │
+        ▼
+librosa decode → wav2vec2 → 768-d vector
+        │
+        ▼
+cosine_similarity(enrolled_embedding, live_embedding)
+        │
+    ┌───┴───────────────────────────────────────┐
+    │  similarity ≥ 0.60  →  ✅ voice verified  │
+    │  similarity < 0.60  →  ❌ login rejected   │
+    └───────────────────────────────────────────┘
+```
+
+**Threshold:** `VOICE_SIMILARITY_THRESHOLD = 0.60` (tunable in `.env`)  
+**Model:** `facebook/wav2vec2-base` via HuggingFace Transformers (runs 100% locally)  
+**Fallback:** If candidate didn't enroll voice, login skips Tier 3 automatically
+
+---
+
+## 🧾 Report Structure
+
+Every completed interview generates a cryptographically signed JSON report:
+
+```json
+{
+  "session_id":        "uuid",
+  "candidate_id":      "uuid",
+  "candidate_name":    "Md. Athar Ali",
+  "started_at":        "2025-05-23T02:00:00Z",
+  "ended_at":          "2025-05-23T02:20:00Z",
+  "mode":              "topic_based",
+  "company_target":    "product",
+  "topics":            ["DSA", "System Design"],
+  "difficulty":        "hard",
+  "average_score":     8.2,
+  "recommendation":    "EXCELLENT",
+  "questions_log": [
+    {
+      "question_number": 1,
+      "question":        "Explain the difference between BFS and DFS...",
+      "answer":          "BFS uses a queue and explores level by level...",
+      "score":           9,
+      "feedback":        "Excellent explanation with correct time complexity.",
+      "difficulty":      "medium",
+      "input_mode":      "voice"
+    }
+  ],
+  "llm_feedback": {
+    "strengths":         ["Strong algorithmic thinking", "Clear communication"],
+    "weaknesses":        ["Depth on distributed systems"],
+    "topics_to_study":   ["Consistent hashing", "CAP theorem"],
+    "overall":           "Ready for FAANG-level interviews with minor prep."
+  },
+  "security_summary": {
+    "tab_switches":      0,
+    "totp_challenges":   0,
+    "multiple_persons":  false,
+    "voice_verified":    true
+  },
+  "report_hash":   "sha256:abc123...",
+  "signature":     "base64-rsa-signature...",
+  "public_key":    "-----BEGIN PUBLIC KEY-----..."
+}
+```
+
+**Verify integrity:**
+```bash
+GET /report/{session_id}/verify
+→ { "valid": true, "verified_at": "2025-05-23T02:21:00Z" }
+```
+
+---
+
+## 🌍 System Requirements
+
+### Minimum (Local Dev)
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| CPU | 4 cores | 8+ cores |
+| RAM | 8 GB | 16 GB |
+| Storage | 5 GB | 10 GB |
+| GPU | Not required | CUDA GPU (speeds up wav2vec2 + DeepFace) |
+| OS | macOS 12 / Ubuntu 20.04 / Windows WSL2 | macOS 14 / Ubuntu 22.04 |
+| Python | 3.11+ | 3.12 |
+| Node.js | 18+ | 20 LTS |
+
+### First-Run Downloads (automatic)
+| Model | Size | Purpose |
+|-------|------|---------|
+| `Qwen2.5:7b` (Ollama) | ~4.7 GB | LLM interviewer |
+| `ArcFace` (DeepFace) | ~200 MB | Face recognition |
+| `wav2vec2-base` (HF) | ~360 MB | Voice embeddings |
+| `YOLOv8n` (Ultralytics) | ~6 MB | Multi-person detection |
+| `python:3.11-slim` (Docker) | ~150 MB | Code sandbox |
+
+> **Total first-run:** ~5.5 GB. Subsequent starts use cached models.
+
+---
+
+## 🔄 WebSocket Event Reference
+
+The platform uses WebSocket for real-time security event streaming between backend and browser.
+
+### Events pushed to Candidate (`/ws/candidate/{session_id}`)
+
+| Event | Trigger | Frontend Action |
+|-------|---------|----------------|
+| `STEP_UP_TOTP_REQUIRED` | Face mismatch detected | Show TOTP modal overlay |
+| `SESSION_TERMINATED` | Security violation threshold | Show termination screen |
+| `MULTIPLE_PERSONS_ALERT` | YOLO detects extra person | Red border + alert log |
+| `MULTIPLE_SPEAKERS_ALERT` | PyAnnote diarization fires | Red border + alert log |
+| `TAB_SWITCH_WARNING` | `visibilitychange` event | Yellow border + warning log |
+| `RECHECK_PASSED` | Step-up TOTP verified | Green border + success log |
+| `INTERVIEW_COMPLETED` | All questions answered | Redirect to report |
+
+### Events pushed to Recruiter (`/ws/recruiter/{session_id}`)
+Mirror of all candidate events — allows real-time proctoring from a separate monitor tab.
+
+### WebSocket Message Format
+```json
+{
+  "event": "MULTIPLE_PERSONS_ALERT",
+  "data": {
+    "person_count": 2,
+    "confidence": 0.94,
+    "timestamp": "2025-05-23T02:10:33Z"
+  }
+}
+```
+
+---
+
+## 📦 Dependencies Breakdown
+
+### Core Python Packages
+```
+fastapi==0.115.*          # async web framework
+uvicorn[standard]         # ASGI server with WebSocket support
+sqlalchemy                # ORM (sync, not async — intentional for thread safety)
+pydantic                  # request/response validation
+python-jose[cryptography] # RS256 JWT
+pyotp                     # TOTP RFC 6238
+qrcode[pil]               # QR code generation for TOTP setup
+deepface                  # ArcFace face recognition
+opencv-python             # image processing + liveness
+dlib                      # facial landmark detection (blink)
+transformers              # wav2vec2 voice embedding
+librosa                   # audio decode (WebM/OGG/WAV)
+scipy                     # WAV fallback decode
+ultralytics               # YOLOv8 multi-person detection
+pyannote.audio            # speaker diarization
+pymupdf                   # PDF resume parsing
+cryptography              # RSA-2048 key generation + signing
+bandit                    # Python static security analysis
+httpx                     # async HTTP client (Deepgram token API)
+python-multipart          # multipart/form-data support
+```
+
+### Frontend npm Packages
+```
+react@18                  # UI framework
+react-dom@18              # DOM renderer
+react-router-dom@6        # client-side routing
+axios                     # HTTP client with interceptors
+recharts                  # score + emotion charts
+@monaco-editor/react      # Monaco (VS Code) code editor
+@deepgram/sdk             # Deepgram streaming STT
+vite@5                    # build tool + dev server
+```
+
+---
+
+## 🤝 Contributing
+
+This is a private portfolio project, but if you'd like to discuss architecture, suggest improvements, or report issues:
+
+1. **Open a GitHub Issue** with a clear description
+2. **Fork** the repo and create a feature branch: `git checkout -b feat/your-feature`
+3. **Follow the code style** — Python: black + isort, JS: ESLint (Vite defaults)
+4. **Write descriptive commits** following [Conventional Commits](https://www.conventionalcommits.org/)
+5. **Open a Pull Request** with a clear description of what was changed and why
+
+### Code Style
+```bash
+# Python formatting
+pip install black isort
+black backend/
+isort backend/
+
+# Frontend linting
+cd frontend
+npm run lint
+```
+
+---
+
 ## 📄 License
 
 Private — All Rights Reserved © 2025 Md. Athar Ali
