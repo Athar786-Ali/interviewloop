@@ -15,6 +15,9 @@
   <img src="https://img.shields.io/badge/SQLite-SQLAlchemy-003B57?style=flat-square&logo=sqlite&logoColor=white" />
   <img src="https://img.shields.io/badge/Security-RSA--2048%20%7C%20JWT%20%7C%20TOTP-red?style=flat-square&logo=letsencrypt&logoColor=white" />
   <img src="https://img.shields.io/badge/Monaco-Editor-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tests-6%20Phase%20Suite-brightgreen?style=flat-square&logo=pytest&logoColor=white" />
+  <img src="https://img.shields.io/badge/Last%20Updated-May%202026-6366f1?style=flat-square" />
   <img src="https://img.shields.io/badge/License-Private-black?style=flat-square" />
 </p>
 
@@ -564,6 +567,7 @@ The adaptive engine raises difficulty when recent scores are high, and lowers it
 
 ## 🛣️ Roadmap
 
+### ✅ Completed
 - [x] 5-tier biometric authentication (Face + Liveness + Voice + TOTP + Multi-person)
 - [x] Adaptive AI interviewer (Ollama Qwen2.5)
 - [x] Real-time voice transcription (Deepgram WebSocket)
@@ -576,12 +580,17 @@ The adaptive engine raises difficulty when recent scores are high, and lowers it
 - [x] Resume-based adaptive questioning
 - [x] Voice enrollment + login biometrics
 - [x] **Monaco Editor (LeetCode-style)** — VS Code engine with 4 languages, minimap, IntelliSense, Ctrl+Enter run
-- [ ] Public shareable report URLs (dynamic routing)
+- [x] Docker Compose full-stack deployment (Ollama + FastAPI + React)
+- [x] 6-phase pytest test suite (infrastructure → integration)
+
+### 🔜 Upcoming
+- [ ] Public shareable report URLs with unique slugs
 - [ ] Multi-user admin panel for batch sessions
 - [ ] Mobile-responsive layout improvements
-- [ ] Docker Compose deployment setup
-- [ ] Interview recording playback
-- [ ] Email report delivery
+- [ ] Interview recording & playback (video + audio)
+- [ ] Email report delivery (SMTP integration)
+- [ ] PostgreSQL support for high-concurrency production deployments
+- [ ] Role-based access control (Admin / Recruiter / Candidate)
 
 ---
 
@@ -887,7 +896,14 @@ A: Yes. Sessions are UUID-isolated, WebSocket channels are per-session, and the 
 
 ## 📅 Changelog
 
-### v1.0.0 — May 2025 (Current)
+### v1.1.0 — May 2026 (Latest)
+- 🔧 Improved enrollment flow UX with animated step-by-step progress indicators
+- 🔧 Fixed `InvalidStateError` in AudioContext cleanup on retry
+- 🔧 Resolved `ImportError` for `get_token_payload` on backend startup
+- 🛡️ Hardened session tab-switch detection and TOTP step-up re-auth
+- 📝 Expanded README with deep-dive sections: Adaptive Engine, Auth, Voice Pipeline, Reports, WebSocket Events, Dependencies, Performance, FAQ
+
+### v1.0.0 — May 2025
 - ✅ 5-tier biometric authentication pipeline (Face → Liveness → Voice → TOTP → YOLO)
 - ✅ Adaptive AI interviewer with 3 company personas and 3 interview modes
 - ✅ Real-time Deepgram WebSocket speech-to-text
@@ -901,13 +917,14 @@ A: Yes. Sessions are UUID-isolated, WebSocket channels are per-session, and the 
 - ✅ 6-phase pytest test suite (infrastructure → integration)
 - ✅ Docker Compose full-stack deployment
 
-### Planned — v1.1.0
+### Planned — v1.2.0
 - [ ] Public shareable report URLs with unique slugs
 - [ ] Multi-user admin panel for batch interview sessions
 - [ ] Mobile-responsive layout improvements
 - [ ] Interview recording & playback (video + audio)
 - [ ] Email report delivery (SMTP integration)
 - [ ] PostgreSQL support for production multi-user deployments
+- [ ] Role-based access control (Admin / Recruiter / Candidate)
 
 ---
 
@@ -1202,11 +1219,12 @@ vite@5                    # build tool + dev server
 
 This is a private portfolio project, but if you'd like to discuss architecture, suggest improvements, or report issues:
 
-1. **Open a GitHub Issue** with a clear description
+1. **Open a GitHub Issue** with a clear description of the bug or feature request
 2. **Fork** the repo and create a feature branch: `git checkout -b feat/your-feature`
-3. **Follow the code style** — Python: black + isort, JS: ESLint (Vite defaults)
+3. **Follow the code style** — Python: `black` + `isort`, JavaScript: ESLint (Vite defaults)
 4. **Write descriptive commits** following [Conventional Commits](https://www.conventionalcommits.org/)
 5. **Open a Pull Request** with a clear description of what was changed and why
+6. **Reference the issue** in your PR description (e.g. `Closes #42`)
 
 ### Code Style
 ```bash
@@ -1220,16 +1238,30 @@ cd frontend
 npm run lint
 ```
 
+> **Note:** All PRs are reviewed for security implications before merging, given the biometric and cryptographic nature of the codebase.
+
 ---
 
 ## 📄 License
 
-Private — All Rights Reserved © 2025 Md. Athar Ali
+Private — All Rights Reserved © 2026 Md. Athar Ali
 
 This project is built as a portfolio demonstration. All biometric data processed locally — never sent to any external server (except Deepgram for audio transcription and Ollama for LLM inference, both of which are opt-in).
 
 ---
 
+## 📬 Contact
+
+**Md. Athar Ali**  
+Full-Stack Developer | AI Systems Builder | Security Enthusiast
+
+- 🐙 GitHub: [@Athar786-Ali](https://github.com/Athar786-Ali)
+- 💼 Open to collaboration on AI, security, and full-stack projects
+- 📧 Reach out via GitHub Issues for bug reports or feature discussions
+
+---
+
 <div align="center">
-  <sub>Built end-to-end with ❤️ — FastAPI · React · Ollama · DeepFace · wav2vec2 · Deepgram · RSA-2048</sub>
+  <sub>Built end-to-end with ❤️ by <strong>Md. Athar Ali</strong></sub><br/>
+  <sub>FastAPI · React · Ollama · DeepFace · wav2vec2 · Deepgram · RSA-2048 · Docker · Monaco Editor</sub>
 </div>
