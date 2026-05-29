@@ -3,6 +3,7 @@ MIIC-Sec — Auth Routes
 FastAPI endpoints for enrollment, login, and TOTP setup.
 """
 
+import asyncio
 import io
 import uuid
 from datetime import datetime, timezone
@@ -134,7 +135,10 @@ async def enroll_candidate(
         first_frame = _read_image(first_image_bytes)
         await face_images[0].seek(0)  # Reset for later use
 
-        liveness_result = detect_liveness(first_frame, _get_liveness_model())
+        # Run liveness in a thread — CPU-heavy, must not block event loop
+        liveness_result = await asyncio.to_thread(
+            detect_liveness, first_frame, _get_liveness_model()
+        )
 
         if not liveness_result["is_live"]:
             db.delete(candidate)
@@ -155,7 +159,8 @@ async def enroll_candidate(
         frame = _read_image(img_bytes)
         frames.append(frame)
 
-    face_result = enroll_face(candidate_id, frames, db)
+    # Run DeepFace enroll in a thread (first run downloads model ~200 MB)
+    face_result = await asyncio.to_thread(enroll_face, candidate_id, frames, db)
     if not face_result["success"]:
         db.delete(candidate)
         db.commit()
@@ -170,7 +175,10 @@ async def enroll_candidate(
             if len(audio_bytes) > 1000:          # sanity: >1 KB
                 audio_arr, sr = _read_audio(audio_bytes)
                 if len(audio_arr) > sr * 2:      # at least 2 seconds of audio
-                    v_result = enroll_voice(candidate_id, audio_arr, sr, db)
+                    # Run wav2vec2 in a thread (first run downloads model ~360 MB)
+                    v_result = await asyncio.to_thread(
+                        enroll_voice, candidate_id, audio_arr, sr, db
+                    )
                     voice_enrolled = v_result["success"]
                     if not voice_enrolled:
                         print(f"\u26a0\ufe0f  Voice enrollment warning: {v_result['message']}")
@@ -233,7 +241,9 @@ async def login_candidate(
     face_frame = _read_image(face_bytes)
 
     try:
-        liveness = detect_liveness(face_frame, _get_liveness_model())
+        liveness = await asyncio.to_thread(
+            detect_liveness, face_frame, _get_liveness_model()
+        )
         if not liveness["is_live"]:
             raise HTTPException(
                 status_code=401,
@@ -242,10 +252,10 @@ async def login_candidate(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"\u26a0\ufe0f  Liveness check warning: {e} \u2014 continuing login")
+        print(f"\u26a0\ufe0f  Liveness check warning: {e} — continuing login")
 
-    # ── Step 2: Face verification ────────────────────────────────
-    face_result = verify_face(candidate_id, face_frame, db)
+    # ── Step 2: Face verification ─────────────────────────────────────────────
+    face_result = await asyncio.to_thread(verify_face, candidate_id, face_frame, db)
     if not face_result["verified"]:
         raise HTTPException(
             status_code=401,
@@ -268,7 +278,9 @@ async def login_candidate(
             from auth.voice_auth import verify_voice
             audio_bytes  = await voice_audio.read()
             audio_arr, sr = _read_audio(audio_bytes)
-            v_result = verify_voice(candidate_id, audio_arr, sr, db)
+            v_result = await asyncio.to_thread(
+                verify_voice, candidate_id, audio_arr, sr, db
+            )
             voice_verified   = v_result["verified"]
             voice_similarity = v_result["similarity"]
             if not voice_verified:

@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Monaco-Editor-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Tests-6%20Phase%20Suite-brightgreen?style=flat-square&logo=pytest&logoColor=white" />
-  <img src="https://img.shields.io/badge/Last%20Updated-May%202026-6366f1?style=flat-square" />
+  <img src="https://img.shields.io/badge/Last%20Updated-May%2029%202026-6366f1?style=flat-square" />
   <img src="https://img.shields.io/badge/License-Private-black?style=flat-square" />
 </p>
 
@@ -654,7 +654,8 @@ git pull origin main
 
 ### Enrollment stuck / taking too long
 - **Expected on first run** — DeepFace downloads ArcFace model (~200 MB) and wav2vec2 downloads from HuggingFace (~360 MB).
-- The UI now shows animated step-by-step progress: Uploading → Face → Voice → TOTP → Saving.
+- The UI shows an animated **5-stage progress indicator**: 📤 Uploading → 👤 Face Processing → 🎙️ Voice Processing → 🔑 TOTP Generation → 💾 Saving.
+- Heavy biometric ops (DeepFace, wav2vec2) now run in `asyncio.to_thread` — the server stays responsive during first-run model downloads.
 - Subsequent enrollments take **~10–20 seconds**.
 - Check backend terminal for detailed logs if it fails.
 
@@ -698,6 +699,9 @@ docker pull python:3.11-slim
 
 | Commit | Description |
 |--------|-------------|
+| *(latest)* | fix: non-blocking enrollment/login via `asyncio.to_thread` + animated stage progress UI |
+| `058fa83` | docs: update README — v1.1.0 changelog, roadmap, new badges, contact section |
+| `17d8db1` | docs: add Docker Compose, Testing, Performance, FAQ, Changelog sections to README |
 | `e90385e` | docs: add 9 deep-dive sections to README (no existing content changed) |
 | `9c23735` | docs: enhance README with Monaco editor docs, troubleshooting, git history |
 | `bf478c5` | fix: resolve `ImportError` for `get_token_payload` on server startup |
@@ -896,7 +900,14 @@ A: Yes. Sessions are UUID-isolated, WebSocket channels are per-session, and the 
 
 ## 📅 Changelog
 
-### v1.1.0 — May 2026 (Latest)
+### v1.2.0 — May 29, 2026 (Latest)
+- ⚡ **Non-blocking biometric pipeline** — DeepFace, wav2vec2, and liveness detection now run in `asyncio.to_thread`, keeping the FastAPI event loop fully responsive during heavy first-run model downloads
+- 🎞️ **Animated enrollment stage progress** — real-time 5-stage indicator (📤 Uploading → 👤 Face → 🎙️ Voice → 🔑 TOTP → 💾 Saving) replaces the generic spinner
+- 🔧 **`AudioContext` cleanup fix** — `retry()` and `useEffect` teardown now guard with `ctx.state !== 'closed'` before calling `.close()`, eliminating `InvalidStateError` on retry
+- 🛡️ **Improved error reporting** — enrollment errors now surface structured JSON detail from the backend (not just generic messages)
+- 🚀 **Enrollment timeout extended to 10 min** — accommodates first-run wav2vec2 + DeepFace model downloads (~560 MB total)
+
+### v1.1.0 — May 2026
 - 🔧 Improved enrollment flow UX with animated step-by-step progress indicators
 - 🔧 Fixed `InvalidStateError` in AudioContext cleanup on retry
 - 🔧 Resolved `ImportError` for `get_token_payload` on backend startup
@@ -917,7 +928,7 @@ A: Yes. Sessions are UUID-isolated, WebSocket channels are per-session, and the 
 - ✅ 6-phase pytest test suite (infrastructure → integration)
 - ✅ Docker Compose full-stack deployment
 
-### Planned — v1.2.0
+### Planned — v1.3.0
 - [ ] Public shareable report URLs with unique slugs
 - [ ] Multi-user admin panel for batch interview sessions
 - [ ] Mobile-responsive layout improvements

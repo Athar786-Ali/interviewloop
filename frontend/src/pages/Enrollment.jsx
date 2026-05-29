@@ -257,14 +257,21 @@ function VoiceStep({ onNext, onSkip }) {
   const retry = () => {
     cancelAnimationFrame(animRef.current)
     clearInterval(timerRef.current)
-    ctxRef.current?.close()
+    // Only close if not already closed
+    if (ctxRef.current && ctxRef.current.state !== 'closed') {
+      ctxRef.current.close().catch(() => {})
+    }
+    ctxRef.current = null
     setBlob(null); setPhase('idle'); setSecs(8); setBars(Array(20).fill(3)); setError('')
   }
 
   useEffect(() => () => {
     cancelAnimationFrame(animRef.current)
     clearInterval(timerRef.current)
-    ctxRef.current?.close()
+    // Guard: only close AudioContext if it hasn't been closed already
+    if (ctxRef.current && ctxRef.current.state !== 'closed') {
+      ctxRef.current.close().catch(() => {})
+    }
     mediaRef.current?.stream?.getTracks().forEach(t => t.stop())
   }, [])
 
@@ -365,15 +372,38 @@ function VoiceStep({ onNext, onSkip }) {
 }
 
 // ─── Step 4: Submit Enrollment ────────────────────────────────────────────────
+const ENROLL_STAGES = [
+  { key: 'uploading',  label: 'Uploading biometric data…',             icon: '📤' },
+  { key: 'face',       label: 'Processing face embeddings (DeepFace)…', icon: '👤' },
+  { key: 'voice',      label: 'Processing voice embeddings (wav2vec2)…',icon: '🎙️' },
+  { key: 'totp',       label: 'Generating TOTP secret & QR code…',      icon: '🔑' },
+  { key: 'saving',     label: 'Saving your profile securely…',           icon: '💾' },
+]
+
 function EnrollStep({ name, email, faceBlobs, voiceBlob, onNext }) {
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
+  const [stageIdx, setStageIdx] = useState(0)
   const startedRef = useRef(false)
+  const stageTimer = useRef(null)
+
+  const startStageAnim = () => {
+    let i = 0
+    setStageIdx(0)
+    stageTimer.current = setInterval(() => {
+      i = Math.min(i + 1, ENROLL_STAGES.length - 1)
+      setStageIdx(i)
+    }, 4500)   // advance stage every 4.5 s
+  }
+
+  const stopStageAnim = () => {
+    clearInterval(stageTimer.current)
+  }
 
   const submit = async () => {
     if (!name?.trim() || !email?.trim()) { setError('Missing name/email.'); return }
     if (!faceBlobs || faceBlobs.length < 5) { setError('Please capture 5 face photos first.'); return }
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setStageIdx(0); startStageAnim()
     try {
       const fd = new FormData()
       fd.append('candidate_name',  name)
@@ -382,11 +412,18 @@ function EnrollStep({ name, email, faceBlobs, voiceBlob, onNext }) {
       if (voiceBlob && voiceBlob.size > 1000) {
         fd.append('voice_audio', voiceBlob, 'voice_enrollment.webm')
       }
+      // Generous timeout — DeepFace + wav2vec2 first-run download can take 3-5 min
       const { data } = await api.post('/auth/enroll', fd, { timeout: 600000 })
+      stopStageAnim()
       onNext(data)
     } catch (e) {
+      stopStageAnim()
       const detail = e.response?.data?.detail
-      setError((typeof detail === 'string' ? detail : null) || e.message || 'Enrollment failed.')
+      const msg = (typeof detail === 'string' ? detail : null)
+        || (typeof detail === 'object' && detail !== null ? JSON.stringify(detail) : null)
+        || e.message
+        || 'Enrollment failed — check the backend terminal for details.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -396,7 +433,10 @@ function EnrollStep({ name, email, faceBlobs, voiceBlob, onNext }) {
     if (startedRef.current) return
     startedRef.current = true
     submit()
+    return () => stopStageAnim()
   }, []) // eslint-disable-line
+
+  const currentStage = ENROLL_STAGES[stageIdx]
 
   return (
     <div className={styles.stepContent}>
@@ -405,17 +445,66 @@ function EnrollStep({ name, email, faceBlobs, voiceBlob, onNext }) {
         Processing your face {voiceBlob ? '& voice ' : ''}biometrics and generating your TOTP QR code.
       </p>
 
-      {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
+      {/* Live stage progress */}
+      {loading && (
+        <div style={{ marginBottom: 20 }}>
+          {ENROLL_STAGES.map((s, i) => (
+            <div key={s.key} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 12px', borderRadius: 'var(--r-sm)', marginBottom: 6,
+              background: i === stageIdx ? 'rgba(99,102,241,0.12)' : 'var(--clr-surface-2)',
+              border: `1px solid ${i === stageIdx ? 'var(--clr-primary)' : 'var(--clr-border)'}`,
+              opacity: i > stageIdx ? 0.4 : 1,
+              transition: 'all 0.4s',
+            }}>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
+                {i < stageIdx ? '✅' : i === stageIdx ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2, display: 'inline-block' }} /> : s.icon}
+              </span>
+              <span style={{
+                fontSize: '0.82rem', fontWeight: i === stageIdx ? 600 : 400,
+                color: i === stageIdx ? 'var(--clr-text)' : 'var(--clr-text-muted)',
+              }}>
+                {s.label}
+              </span>
+              {i < stageIdx && (
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--clr-success)' }}>Done</span>
+              )}
+              {i === stageIdx && (
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--clr-primary)' }}>In progress…</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-      <button className="btn btn-success" disabled={loading} onClick={submit}>
-        {loading
-          ? <><span className="spinner" style={{ marginRight: 8 }} /> Enrolling — first time may take a few minutes…</>
-          : (error ? 'Retry Enrollment' : 'Starting…')}
-      </button>
+      {error && (
+        <div className="alert alert-danger" style={{ marginBottom: 16, fontSize: '0.88rem', wordBreak: 'break-word' }}>
+          <strong>❌ Enrollment Failed</strong><br />
+          {error}
+          <div style={{ marginTop: 8, fontSize: '0.78rem', color: 'inherit', opacity: 0.8 }}>
+            💡 Tip: First-time run downloads AI models (~500 MB). Check backend terminal for details.
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          className={`btn ${loading ? 'btn-ghost' : error ? 'btn-danger' : 'btn-success'}`}
+          disabled={loading}
+          onClick={submit}
+          style={{ flex: 1, padding: '12px' }}
+        >
+          {loading
+            ? <><span className="spinner" style={{ marginRight: 8 }} />Enrolling — AI models may take a few minutes on first run…</>
+            : error ? '🔄 Retry Enrollment' : '▶ Start Enrollment'}
+        </button>
+      </div>
 
       {loading && (
-        <p style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--clr-text-muted)' }}>
-          ⏳ Processing biometrics — please wait…
+        <p style={{ marginTop: 12, fontSize: '0.78rem', color: 'var(--clr-text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          ⏳ <strong>Please don't close this tab.</strong><br />
+          First run downloads DeepFace &amp; wav2vec2 models (~500 MB).<br />
+          Subsequent enrollments take ~10–20 seconds.
         </p>
       )}
     </div>
