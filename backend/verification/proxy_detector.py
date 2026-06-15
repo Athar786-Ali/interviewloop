@@ -112,6 +112,23 @@ class ProxyDetector:
         self.consecutive_multi_person_count: Dict[str, int] = {}
         self.frame_counter:                  Dict[str, int] = {}
 
+    def analyze_frame(self, frame: np.ndarray) -> int:
+        """
+        Synchronous convenience method: run YOLO on *frame* and return the
+        number of persons detected.
+
+        Used by security/routes.py POST /security/face-recheck which needs
+        a simple int result rather than the full async process_frame() flow.
+
+        Args:
+            frame: BGR image as numpy array (H x W x 3).
+
+        Returns:
+            Number of persons detected (int, 0 if inference fails).
+        """
+        detection = count_persons_in_frame(frame, self.model)
+        return detection["person_count"]
+
     async def process_frame(
         self,
         session_id: str,

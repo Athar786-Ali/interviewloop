@@ -11,6 +11,11 @@
  *  - Survives React re-renders and Vite HMR module resets
  *  - Cleared automatically when the browser tab closes (unlike localStorage)
  *  - Not accessible across tabs (more secure than localStorage for tokens)
+ *
+ * API_BASE_URL resolution order:
+ *  1. VITE_API_URL environment variable (set at Docker build time)
+ *  2. Empty string → uses the same origin (works when Vite proxy or nginx
+ *     proxies /auth, /interview, etc. to the backend)
  */
 import axios from 'axios'
 
@@ -19,6 +24,11 @@ const KEYS = {
   sessionId:   'miic_session_id',
   candidateId: 'miic_candidate_id',
 }
+
+// ── Resolve backend base URL ──────────────────────────────────────────────────
+// In Docker production: VITE_API_URL is injected at build time.
+// In Vite dev server:   empty string — the vite.config.js proxy handles /auth, /interview etc.
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 // ── Auth store (backed by sessionStorage) ────────────────────────────────────
 
@@ -46,7 +56,7 @@ export function isAuthenticated() {
 
 // ── Axios instance ────────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: API_BASE_URL,
   timeout: 120000,   // 2 min — ML models can be slow on first run
 })
 

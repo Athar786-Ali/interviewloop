@@ -9,7 +9,6 @@ tf-keras
 torch
 torchaudio
 transformers
-openai-whisper
 fer
 mediapipe
 ultralytics
@@ -28,3 +27,5 @@ httpx
 pytest
 pytest-asyncio
 pypdf
+librosa
+soundfile

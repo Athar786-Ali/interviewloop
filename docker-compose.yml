@@ -1,10 +1,9 @@
 version: "3.9"
 
 services:
-  # ── Ollama LLM (local, M1-native) ────────────────────────────────────────
+  # ── Ollama LLM (local) ────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama
-    platform: linux/arm64        # M1 Mac native
     container_name: miic_ollama
     ports:
       - "11434:11434"
@@ -16,6 +15,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   # ── FastAPI Backend ───────────────────────────────────────────────────────
   backend:
@@ -30,25 +30,29 @@ services:
       - ./reports:/app/reports
       - ./backend/miic_sec.db:/app/miic_sec.db
     environment:
-      HF_TOKEN: ${HF_TOKEN:-}
       OLLAMA_URL: http://ollama:11434
+      # Allow the React frontend (served on port 3000) plus localhost for dev
+      ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
     env_file:
-      - .env
+      - ./backend/.env          # secrets: HF_TOKEN, DEEPGRAM_API_KEY, etc.
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama                  # start ollama first; backend degrades gracefully if it isn't ready yet
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
 
   # ── React Frontend ────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Tell the built JS bundle where to reach the backend
+        VITE_API_URL: http://localhost:8000
     container_name: miic_frontend
     ports:
       - "3000:3000"

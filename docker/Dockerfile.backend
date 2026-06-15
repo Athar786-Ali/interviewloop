@@ -2,15 +2,31 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps for OpenCV + audio
+# ── System dependencies ───────────────────────────────────────────────────────
+# libgl1 + libglib2.0 = OpenCV  |  ffmpeg = Whisper audio  |  curl = healthcheck
+# libsndfile1 = librosa / soundfile audio I/O
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx libglib2.0-0 ffmpeg curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsndfile1 \
+    ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Python dependencies (cached layer) ───────────────────────────────────────
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ── Application code ──────────────────────────────────────────────────────────
 COPY backend/ .
 
+# Also copy the YOLO weights from root if they exist there
+# (backend/ already has its own copy, this is a no-op if not present)
+COPY yolov8n.pt ./yolov8n.pt 2>/dev/null || true
+
+# ── Runtime directories ───────────────────────────────────────────────────────
+RUN mkdir -p /app/keys /app/reports
+
 EXPOSE 8000
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

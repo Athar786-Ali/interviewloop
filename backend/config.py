@@ -3,6 +3,8 @@ MIIC-Sec Configuration
 All constants and settings in one place.
 """
 
+import os
+
 # ─── Database ────────────────────────────────────────────────────
 DATABASE_URL = "sqlite:///./miic_sec.db"
 
@@ -26,14 +28,14 @@ CONTINUOUS_VERIFY_INTERVAL = 30          # seconds
 MAX_FAILURES_BEFORE_TERMINATE = 2
 
 # ─── Ollama (Local LLM) ─────────────────────────────────────────
-OLLAMA_URL = "http://localhost:11434"
-# Yeh do lines badlo
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = "qwen2.5:7b"
 OLLAMA_FALLBACK_MODEL = "qwen2.5:3b"
 
-# ─── Whisper (Speech-to-Text) ───────────────────────────────────
-WHISPER_MODEL = "small"
+# ─── Deepgram (Speech-to-Text) ──────────────────────────────────
+# API key is loaded from DEEPGRAM_API_KEY env var in backend/.env
+DEEPGRAM_MODEL    = "nova-2"
+DEEPGRAM_LANGUAGE = "en-IN"    # Indian English; change to "en" for global
 
 # ─── YOLO (Object Detection) ────────────────────────────────────
 YOLO_MODEL = "yolov8n.pt"
-

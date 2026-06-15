@@ -4,11 +4,17 @@ import Editor from '@monaco-editor/react'
 import api, { getAuth, clearAuth } from '../utils/api'
 import InterviewSetup from './InterviewSetup'
 
-const WS_BASE = 'ws://localhost:8000'
+// Derive WebSocket base from the configured API URL.
+// In dev: VITE_API_URL is empty → use current window location (Vite proxy handles /ws)
+// In Docker: VITE_API_URL = http://localhost:8000 → ws://localhost:8000
+const _apiBase = import.meta.env.VITE_API_URL || ''
+const WS_BASE = _apiBase
+  ? _apiBase.replace(/^https/, 'wss').replace(/^http/, 'ws')
+  : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
 
 // ── Voice hook (Deepgram Live WebSocket streaming) ─────────────────
 const DEEPGRAM_WS_URL =
-  'wss://api.deepgram.com/v1/listen?model=nova-2&language=en-IN&smart_format=true'
+  'wss://api.deepgram.com/v1/listen?model=nova-2&language=en-IN&smart_format=true&punctuate=true'
 
 function useVoiceInput({ onLiveText, onError }) {
   const [voiceState, setVoiceState] = useState('IDLE') // IDLE, RECORDING, TRANSCRIBING, DONE, ERROR

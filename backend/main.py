@@ -176,15 +176,24 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
 
+_default_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+# ALLOWED_ORIGINS env var lets Docker / production deployments inject the
+# real frontend URL without touching this file.
+# Example: ALLOWED_ORIGINS="https://myapp.example.com,http://localhost:3000"
+_env_origins_raw = os.environ.get("ALLOWED_ORIGINS", "")
+_env_origins = [o.strip() for o in _env_origins_raw.split(",") if o.strip()]
+_origins = list(set(_default_origins + _env_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

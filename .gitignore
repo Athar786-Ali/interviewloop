@@ -3,6 +3,7 @@ keys/private_key.pem
 __pycache__/
 *.pyc
 .env
+backend/.env
 node_modules/
 *.h5
 *.pt
@@ -11,6 +12,7 @@ venv/
 dist/
 build/
 *.egg-info/
-
-
+.DS_Store
+reports/*
+!reports/.gitkeep
 

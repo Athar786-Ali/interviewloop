@@ -1,216 +1,189 @@
 """
-MIIC-Sec — Audio Transcriber (Whisper)
+MIIC-Sec — Audio Transcriber (Deepgram)
 
-Browser MediaRecorder sends audio/webm (Opus codec).
-Whisper needs PCM WAV (16 kHz, mono) for best results.
+Replaces Whisper with Deepgram's pre-recorded transcription REST API.
 
 Pipeline:
-  1. Save incoming bytes to a temp .webm file
-  2. Use subprocess ffmpeg to convert → 16 kHz mono WAV
-  3. Feed the WAV to Whisper (fp16=False for CPU safety)
-  4. Return { transcript, confidence }
+  1. Receive raw audio bytes from the browser (WebM / OGG / WAV / MP4)
+  2. POST directly to Deepgram /v1/listen (no local ffmpeg conversion needed)
+  3. Return { transcript, confidence }
 
 Requirements:
-  - ffmpeg must be installed (brew install ffmpeg on macOS)
-  - openai-whisper must be installed (pip install openai-whisper)
+  - DEEPGRAM_API_KEY set in backend/.env
+  - httpx installed (already in requirements.txt)
 """
 
 import logging
 import os
-import subprocess
-import tempfile
-import contextlib
-import wave
 
-import whisper
+import httpx
 
 logger = logging.getLogger(__name__)
 
-# ─── Ensure Homebrew ffmpeg is in PATH ───────────────────────────────────────
-for _brew_path in ("/opt/homebrew/bin", "/usr/local/bin"):
-    if _brew_path not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = f"{_brew_path}:{os.environ.get('PATH', '')}"
+# ─── Deepgram REST endpoint ───────────────────────────────────────────────────
+DEEPGRAM_URL = (
+    "https://api.deepgram.com/v1/listen"
+    "?model=nova-2"
+    "&language=en-IN"          # Indian English; change to 'en' for global
+    "&smart_format=true"
+    "&punctuate=true"
+    "&utterances=false"
+    "&detect_language=false"
+)
 
-# ─── Lazy-load model (singleton) ─────────────────────────────────────────────
-_model = None
+# ─── Content-type map ─────────────────────────────────────────────────────────
+_MIME_MAP = {
+    ".webm":  "audio/webm",
+    ".weba":  "audio/webm",
+    ".ogg":   "audio/ogg",
+    ".oga":   "audio/ogg",
+    ".wav":   "audio/wav",
+    ".mp4":   "audio/mp4",
+    ".m4a":   "audio/mp4",
+    ".mp3":   "audio/mpeg",
+    ".flac":  "audio/flac",
+}
 
-def _get_model() -> whisper.Whisper:
-    """Load the Whisper model once and cache it."""
-    global _model
-    if _model is None:
-        import config
-        model_name = getattr(config, "WHISPER_MODEL", "small")
-        logger.info("Loading Whisper model: %s …", model_name)
-        _model = whisper.load_model(model_name)
-        logger.info("Whisper model '%s' ready.", model_name)
-    return _model
 
-
-def _convert_to_wav(input_path: str, output_path: str) -> bool:
+def _resolve_content_type(filename: str | None, content_type: str | None) -> str:
     """
-    Convert any audio file (webm/ogg/mp4/…) to 16 kHz mono PCM WAV
-    using the system ffmpeg.  Returns True on success.
-
-    Tries with an explicit -f webm hint first (handles browsers that write
-    incomplete EBML headers), then falls back without the hint.
-    """
-    base_cmd = [
-        "ffmpeg", "-y",
-        "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
-        output_path,
-    ]
-
-    # Attempt 1 — with explicit webm format hint (fixes incomplete EBML headers)
-    # Attempt 2 — without hint (let ffmpeg auto-detect)
-    attempts = [
-        ["ffmpeg", "-y", "-f", "webm", "-i", input_path,
-         "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", output_path],
-        ["ffmpeg", "-y", "-i", input_path,
-         "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", output_path],
-    ]
-
-    for i, cmd in enumerate(attempts, 1):
-        try:
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=30,
-            )
-            if result.returncode == 0:
-                logger.info("ffmpeg conversion succeeded (attempt %d)", i)
-                return True
-            logger.debug(
-                "ffmpeg attempt %d failed (code %d): %s",
-                i, result.returncode,
-                result.stderr.decode(errors="replace")[-300:],
-            )
-        except FileNotFoundError:
-            logger.error("ffmpeg not found. Install it with: brew install ffmpeg")
-            return False
-        except subprocess.TimeoutExpired:
-            logger.error("ffmpeg conversion timed out.")
-            return False
-
-    logger.error("ffmpeg: all conversion attempts failed for %s", input_path)
-    return False
-
-
-def _guess_input_suffix(filename: str | None, content_type: str | None) -> str:
-    """
-    Pick a temp-file suffix based on the incoming filename / content-type.
-    This helps ffmpeg auto-detect correctly (especially for WAV uploads).
+    Determine the best Content-Type to send to Deepgram.
+    Falls back to audio/webm (most common browser MediaRecorder output).
     """
     name = (filename or "").lower()
-    ctype = (content_type or "").lower()
-
-    for ext in (".wav", ".webm", ".weba", ".ogg", ".oga", ".mp4", ".m4a", ".mp3"):
+    for ext, mime in _MIME_MAP.items():
         if name.endswith(ext):
-            return ext
+            return mime
 
-    if "wav" in ctype:
-        return ".wav"
-    if "ogg" in ctype:
-        return ".ogg"
-    if "mp4" in ctype:
-        return ".m4a"
-    if "mpeg" in ctype or "mp3" in ctype:
-        return ".mp3"
-    if "webm" in ctype:
-        return ".webm"
+    ct = (content_type or "").lower()
+    for mime in _MIME_MAP.values():
+        if mime in ct:
+            return mime
 
-    return ".webm"
+    return "audio/webm"
 
 
-def transcribe_audio(audio_bytes: bytes, filename: str | None = None, content_type: str | None = None) -> dict:
+def transcribe_audio(
+    audio_bytes: bytes,
+    filename: str | None = None,
+    content_type: str | None = None,
+) -> dict:
     """
-    Transcribe audio bytes (webm/ogg/wav/mp4 …) to text.
+    Transcribe audio bytes via Deepgram pre-recorded REST API.
 
     Args:
-        audio_bytes: raw bytes from the browser MediaRecorder
+        audio_bytes:  Raw bytes from the browser MediaRecorder.
+        filename:     Original filename (used for MIME detection).
+        content_type: HTTP Content-Type header from upload (used for MIME detection).
 
     Returns:
         { "transcript": str, "confidence": float }
 
     Raises:
-        ValueError for invalid/unusable audio (client error)
-        RuntimeError for unexpected transcription failures (server error)
+        ValueError  — audio too short / empty / bad API response (client error)
+        RuntimeError — network / server error
     """
-    if not audio_bytes:
-        raise RuntimeError("Empty audio data received.")
+    if not audio_bytes or len(audio_bytes) < 100:
+        raise ValueError(
+            "Audio file is empty or too short. "
+            "Please record at least 1 second of speech."
+        )
 
-    webm_tmp = None
-    wav_tmp  = None
+    api_key = (os.environ.get("DEEPGRAM_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "DEEPGRAM_API_KEY is not configured. "
+            "Add it to backend/.env and restart the server."
+        )
+
+    mime = _resolve_content_type(filename, content_type)
+    logger.info(
+        "Deepgram transcribe — filename=%s size=%d mime=%s",
+        filename, len(audio_bytes), mime,
+    )
+
+    headers = {
+        "Authorization": f"Token {api_key}",
+        "Content-Type":  mime,
+    }
+
     try:
-        # 1. Write incoming bytes to a temp file
-        input_suffix = _guess_input_suffix(filename, content_type)
-        with tempfile.NamedTemporaryFile(suffix=input_suffix, delete=False) as f:
-            f.write(audio_bytes)
-            webm_tmp = f.name
-
-        # 2. Convert to WAV
-        wav_fd, wav_tmp = tempfile.mkstemp(suffix=".wav")
-        os.close(wav_fd)
-
-        converted = _convert_to_wav(webm_tmp, wav_tmp)
-
-        if not converted or not os.path.exists(wav_tmp):
-            raise ValueError("Could not decode audio. Please check your microphone and try again.")
-
-        # Duration validation (more reliable than checking container byte size)
-        try:
-            with contextlib.closing(wave.open(wav_tmp, "rb")) as wf:
-                frames = wf.getnframes()
-                rate = wf.getframerate() or 0
-                duration_s = (frames / float(rate)) if rate else 0.0
-            if duration_s < 0.8:
-                raise ValueError("Audio recording too short. Please record at least 1 second and speak clearly.")
-        except ValueError:
-            raise
-        except Exception as exc:
-            logger.warning("Could not parse WAV duration (%s). Continuing anyway.", exc)
-
-        input_file = wav_tmp
-
-        # 3. Transcribe
-        model = _get_model()
-        logger.info("Transcribing %s …", input_file)
-        try:
-            result = model.transcribe(
-                input_file,
-                fp16=False,                       # CPU safe
-                language=None,                    # auto-detect language
-                task="transcribe",
-                condition_on_previous_text=False, # avoids failure loops on short audio
-                temperature=0.0,
-                no_speech_threshold=0.3,
-                verbose=False,
+        with httpx.Client(timeout=60.0) as client:
+            response = client.post(
+                DEEPGRAM_URL,
+                headers=headers,
+                content=audio_bytes,
             )
-        except RuntimeError as exc:
-            msg = str(exc)
-            if "Failed to load audio" in msg or "Invalid data found when processing input" in msg:
-                raise ValueError("Could not decode audio. Please check your microphone and try again.") from exc
-            raise
+    except httpx.TimeoutException as exc:
+        logger.error("Deepgram request timed out: %s", exc)
+        raise RuntimeError(
+            "Deepgram transcription timed out. "
+            "Check your internet connection and try again."
+        ) from exc
+    except httpx.HTTPError as exc:
+        logger.error("Deepgram HTTP error: %s", exc)
+        raise RuntimeError(f"Deepgram request failed: {exc}") from exc
 
-        transcript = result.get("text", "").strip()
-        logger.info("Transcript (%d chars): %s", len(transcript), transcript[:80])
+    # ── Parse response ────────────────────────────────────────────────────────
+    if response.status_code == 400:
+        body = response.text[:300]
+        logger.warning("Deepgram 400: %s", body)
+        raise ValueError(
+            "Deepgram could not decode the audio. "
+            "Please record again and speak clearly."
+        )
 
-        return {
-            "transcript":  transcript,
-            "confidence":  0.95 if transcript else 0.0,
-        }
+    if response.status_code == 401:
+        raise RuntimeError(
+            "Deepgram API key is invalid or expired. "
+            "Update DEEPGRAM_API_KEY in backend/.env."
+        )
 
-    except ValueError:
-        raise
+    if response.status_code == 402:
+        raise RuntimeError(
+            "Deepgram account quota exceeded. "
+            "Check your Deepgram dashboard for usage limits."
+        )
+
+    if response.status_code not in (200, 201):
+        body = response.text[:300]
+        logger.error("Deepgram unexpected status %d: %s", response.status_code, body)
+        raise RuntimeError(
+            f"Deepgram returned HTTP {response.status_code}. "
+            "Please try again."
+        )
+
+    try:
+        data = response.json()
     except Exception as exc:
-        logger.exception("Transcription error: %s", exc)
-        raise RuntimeError(f"Transcription failed: {exc}") from exc
+        raise RuntimeError(f"Deepgram returned non-JSON response: {exc}") from exc
 
-    finally:
-        # Clean up temp files
-        for path in (webm_tmp, wav_tmp):
-            if path and os.path.exists(path):
-                try:
-                    os.unlink(path)
-                except OSError:
-                    pass
+    # Extract transcript from nova-2 response structure:
+    # { results: { channels: [ { alternatives: [ { transcript, confidence } ] } ] } }
+    try:
+        channel     = data["results"]["channels"][0]
+        alternative = channel["alternatives"][0]
+        transcript  = alternative.get("transcript", "").strip()
+        confidence  = float(alternative.get("confidence", 0.0))
+    except (KeyError, IndexError, TypeError) as exc:
+        logger.error("Deepgram response parse error: %s — body: %s", exc, str(data)[:300])
+        raise ValueError(
+            "Deepgram returned an unexpected response format. "
+            "Please try recording again."
+        ) from exc
+
+    if not transcript:
+        raise ValueError(
+            "No speech detected in your recording. "
+            "Please speak clearly and try again."
+        )
+
+    logger.info(
+        "Deepgram transcript (%d chars, confidence=%.2f): %s",
+        len(transcript), confidence, transcript[:80],
+    )
+
+    return {
+        "transcript": transcript,
+        "confidence": round(confidence, 4),
+    }

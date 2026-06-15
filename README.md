@@ -2,285 +2,233 @@
 
 <img src="https://img.shields.io/badge/MIIC--Sec-AI%20Interview%20Platform-6366f1?style=for-the-badge&logo=shield&logoColor=white" />
 
-<h1>🛡️ MIIC-Sec</h1>
-<h3>AI-Powered Secure Mock Interview & Career Accelerator Platform</h3>
+# 🛡️ MIIC-Sec
+### AI-Powered Secure Mock Interview & Career Accelerator Platform
 
 <p>
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Ollama-Qwen2.5:7b-FF6B35?style=flat-square&logo=ollama&logoColor=white" />
-  <img src="https://img.shields.io/badge/Deepgram-Real--time%20STT-00E599?style=flat-square&logo=deepgram&logoColor=black" />
-  <img src="https://img.shields.io/badge/SQLite-SQLAlchemy-003B57?style=flat-square&logo=sqlite&logoColor=white" />
-  <img src="https://img.shields.io/badge/Security-RSA--2048%20%7C%20JWT%20%7C%20TOTP-red?style=flat-square&logo=letsencrypt&logoColor=white" />
-  <img src="https://img.shields.io/badge/Monaco-Editor-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" />
+  <img src="https://img.shields.io/badge/Ollama-Qwen2.5:7b-FF6B35?style=flat-square" />
+  <img src="https://img.shields.io/badge/Deepgram-nova--2-00E599?style=flat-square" />
+  <img src="https://img.shields.io/badge/Security-RSA--2048%20%7C%20TOTP%20%7C%20Biometric-red?style=flat-square" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tests-6%20Phase%20Suite-brightgreen?style=flat-square&logo=pytest&logoColor=white" />
-  <img src="https://img.shields.io/badge/Last%20Updated-May%2029%202026-6366f1?style=flat-square" />
-  <img src="https://img.shields.io/badge/License-Private-black?style=flat-square" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 </p>
 
 <p>
-  <b>A fully self-hosted, production-grade AI mock interview platform</b><br/>
-  with 5-tier biometric security, adaptive AI questioning, real-time transcription,<br/>
-  cryptographically signed reports, and a student-centric career analytics dashboard.
+  <b>A fully self-hosted, production-ready AI mock interview platform</b><br/>
+  with 5-tier biometric security · adaptive LLM questioning · real-time Deepgram transcription<br/>
+  cryptographically signed reports · live code editor · student career analytics
 </p>
 
 <p>
-  <a href="#-features">Features</a> •
+  <a href="#-what-this-project-does">What It Does</a> •
+  <a href="#-live-demo--screenshots">Screenshots</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
   <a href="#-architecture">Architecture</a> •
   <a href="#-security-model">Security</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-api-reference">API Reference</a> •
-  <a href="#-project-structure">Project Structure</a>
+  <a href="#-author">Author</a>
 </p>
 
 ---
 
 </div>
 
-## ✨ Features
+## 🎯 What This Project Does
 
-### 🎓 Student Career Accelerator Dashboard
-- **Personalized Dashboard** — greets by name, shows total interviews, average score, personal best, and monthly activity
-- **Score Progress Chart** — interactive area chart tracking growth over every session (recharts)
-- **Interview History Table** — full searchable log of every mock, clicking any row opens the full report
-- **Company-Specific AI Personas** — practice tailored to your exact target company type
-- **Verified Public Reports** — cryptographically signed reports you can share on LinkedIn
+MIIC-Sec is a **full-stack AI mock interview system** built as a major academic/personal project. It solves a real problem — students preparing for tech interviews have no way to practice in a secure, proctored, feedback-rich environment that mirrors real company interview conditions.
 
-### 🤖 AI-Powered Adaptive Interviewer
-- **Local LLM** — Qwen2.5:7b via Ollama, fully self-hosted with zero data leaving your machine
-- **Adaptive Difficulty** — dynamically adjusts question difficulty (easy / medium / hard) based on candidate performance using a sliding-window scoring algorithm
-- **3 Interview Modes:**
-  - 📚 **Topic Based** — select specific CS topics (OS, DBMS, DSA, OOP, CN, System Design, etc.)
-  - 📄 **Resume Based** — AI reads your PDF resume and asks questions from your own projects & experience
-  - 🔗 **Combined** — resume + selected topics together for a comprehensive mock
+The platform combines:
+- A **local AI interviewer** (Qwen2.5:7b via Ollama) that adapts difficulty in real-time
+- **Biometric security** (face + voice + liveness + TOTP + multi-person detection) to prevent impersonation
+- **Real-time voice transcription** via Deepgram (live streaming, no upload lag)
+- **Cryptographically signed reports** (RSA-2048) that students can verify and share
+- A **Monaco code editor** for coding questions (same engine as VS Code / LeetCode)
+
+> **Built entirely from scratch** — no off-the-shelf interview platform, no pre-built auth library. Every security tier, AI pipeline, and UI component was designed and implemented independently.
+
+---
+
+## 🖼️ Live Demo & Screenshots
+
+| Screen | Description |
+|--------|-------------|
+| `/enroll` | Multi-step biometric enrollment — face capture (5 angles) + voice + TOTP QR |
+| `/login` | Face → Liveness → Voice → TOTP sequential auth with live camera feed |
+| `/dashboard` | Score progress chart, interview history table, stats cards |
+| `/interview` | 3-column layout: security panel + Q&A + stats. Voice or text input |
+| `/report/:id` | Detailed per-question scores, emotion timeline, security audit, RSA signature |
+
+---
+
+## ✨ Key Features
+
+### 🤖 Adaptive AI Interviewer
+- **Local LLM** — Qwen2.5:7b via Ollama. Fully self-hosted. Zero data leaves your machine.
+- **Adaptive difficulty** — sliding-window algorithm adjusts easy/medium/hard in real-time based on last 3 scores
+- **3 Interview Modes** — Topic Based · Resume Based (AI reads your PDF) · Combined
 - **3 Company AI Personas:**
-  | Persona | Style | Target |
-  |---------|-------|--------|
-  | 🏢 Service Based | CS fundamentals, OOP basics, SQL, verbal logic, straightforward questions | TCS, Wipro, Infosys |
-  | 🚀 Product / FAANG | Deep CS, system design, edge cases, optimal complexity, cross-questioning | Google, Amazon, Microsoft |
-  | ⚡ Startup | Practical skills, framework knowledge, project-based questions, pragmatism over theory | Fast-paced product startups |
 
-### 🔐 5-Tier Biometric Security System
+| Persona | Target | AI Style |
+|---------|--------|----------|
+| 🏢 Service Based | TCS / Wipro / Infosys | CS fundamentals, OOP, SQL, verbal logic |
+| 🚀 Product / FAANG | Google / Amazon / Microsoft | System design, edge cases, optimal complexity, cross-questioning |
+| ⚡ Startup | Fast-paced product cos | Practical skills, frameworks, real-world problem solving |
+
+### 🔐 5-Tier Biometric Security
 | Tier | Technology | What It Checks |
-|------|-----------|---------------|
-| **Tier 1** | DeepFace (ArcFace model) | Face biometric match against enrolled embedding |
-| **Tier 2** | Dlib + blink detection | Liveness check — prevents photo spoofing |
-| **Tier 3** | wav2vec2-base (HuggingFace) | Voice biometric match (cosine similarity ≥ 0.60) |
-| **Tier 4** | PyOTP + TOTP | Time-based One-Time Password (Google Authenticator) |
-| **Tier 5** | YOLO (YOLOv8) | Multi-person detection — flags if another person appears |
+|------|-----------|----------------|
+| **1 — Face** | DeepFace (ArcFace model) | Biometric face match against enrolled embedding |
+| **2 — Liveness** | Dlib + blink detection | Prevents photo/video spoofing |
+| **3 — Voice** | wav2vec2-base (HuggingFace) | Voice biometric (cosine similarity ≥ 0.60) |
+| **4 — TOTP** | PyOTP (RFC 6238) | 6-digit rotating code — Google Authenticator |
+| **5 — Proctoring** | YOLOv8 + PyAnnote | Multi-person/speaker detection during interview |
 
-### 🎙️ Real-Time Voice Intelligence
-- **Deepgram WebSocket** — live streaming speech-to-text with auto-revoking temporary tokens (security-first)
-- **Voice Enrollment** — 8-second voice recording with animated waveform visualizer during enrollment
-- **Speaker Diarization** — PyAnnote.audio detects multiple speakers in the audio stream (flags cheating)
-- **Voice Login Verification** — voice required at every login if enrolled (falls back gracefully if not enrolled)
+### 🎙️ Real-Time Voice with Deepgram
+- **Live WebSocket streaming** — Deepgram nova-2 model, `en-IN` language, smart formatting
+- Short-lived **temp API keys** issued per session and revoked immediately after recording ends
+- Fallback to typed input if microphone unavailable
 
-### 📊 Hyper-Actionable Feedback & Reports
-- **Structured LLM Feedback** — AI generates Strengths, Weaknesses, Topics to Study, and Overall Assessment after every interview
-- **Emotion Timeline** — gaze score and speech confidence tracked per question and plotted as a chart
-- **Student-Centric Ratings:** `🏆 EXCELLENT` (≥7.5) · `📈 NEEDS PRACTICE` (≥5.0) · `📉 POOR` (<5.0)
-- **Cryptographically Signed Reports** — RSA-2048 + SHA-256 tamper-evident JSON reports
-- **Hash-Chain Audit Log** — every security event is linked by a SHA-256 hash chain (blockchain-style)
-- **LinkedIn Share Button** — one-click pre-filled post to share your verified interview result
+### 📊 Cryptographic Reports
+- **RSA-2048 + SHA-256** signed report JSON after every interview
+- **Blockchain-style audit log** — every event linked by SHA-256 hash chain
+- **Publicly verifiable** — `GET /report/:id/verify` returns `{ valid: true/false }`
+- Shareable on LinkedIn
 
-### 💻 Live Code Execution — Monaco Editor
-- **Monaco Editor** (VS Code engine) — same editor used in LeetCode, VSCode, and GitHub Codespaces
-- **4 Languages** — Python 🐍, JavaScript 🟨, Java ☕, C++ ⚙️ — each with persistent independent code slots
-- **VS Code `vs-dark` Theme** — syntax highlighting, bracket pair colorization, indentation guides, minimap
-- **Font Ligatures** — JetBrains Mono / Fira Code / Cascadia Code rendering
-- **Toolbar:**  Language pills · A- / A+ font size · ↺ Reset · ▶ Run (with `Ctrl+Enter` shortcut)
-- **Tab System:** 📝 Code tab ↔ 🖥 Output tab (auto-switches on Run)
-- **Output Panel:** coloured stdout / stderr, execution time (ms), `[HIGH]`/`[MEDIUM]` security analysis warnings
-- **VS Code Status Bar** — blue bar showing language, encoding, tab size, sandbox label
-- **Security Analysis** — Bandit + custom pattern scanner before sandbox execution
-- **Docker Sandbox** — `--network none --memory 128m --cpus 0.5 --read-only` container per run
-
-### 🏗️ Enterprise-Grade Infrastructure
-- **JWT Authentication** — RS256-signed tokens with session binding
-- **WebSocket Real-time** — live security event stream to candidate and monitor connections
-- **Tab Switch Detection** — warns and terminates session after repeated tab switches
-- **Continuous Identity Re-verification** — step-up TOTP challenge if face mismatch detected mid-interview
-- **Emotion Analysis Pipeline** — threaded background analysis of gaze and audio confidence throughout the session
-
----
-
-## 🏛️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         MIIC-Sec Platform                           │
-│                                                                     │
-│  ┌──────────────────────┐        ┌──────────────────────────────┐  │
-│  │   React Frontend      │◄──────►│      FastAPI Backend          │  │
-│  │   (Vite + Recharts)  │  HTTP  │      (port 8000)             │  │
-│  │                      │◄──────►│                              │  │
-│  │  /login              │  WS    │  /auth/*   — Biometrics      │  │
-│  │  /enroll             │        │  /interview/* — LLM + AI     │  │
-│  │  /dashboard          │        │  /user/*   — Dashboard       │  │
-│  │  /interview          │        │  /report/* — Signed Reports  │  │
-│  │  /report/:id         │        │  /security/* — Proctoring    │  │
-│  └──────────────────────┘        │  /ws/*     — Live Events     │  │
-│                                  └──────────────┬───────────────┘  │
-│                                                 │                   │
-│         ┌───────────────┬──────────────┬────────┴──────────┐       │
-│         │               │              │                   │       │
-│   ┌─────▼──────┐  ┌─────▼──────┐  ┌───▼──────┐  ┌────────▼─────┐ │
-│   │  Ollama    │  │  Deepgram  │  │  SQLite  │  │  Local Keys  │ │
-│   │ Qwen2.5:7b │  │  (STT WS)  │  │  + ORM   │  │  RSA-2048    │ │
-│   └────────────┘  └────────────┘  └──────────┘  └──────────────┘ │
-│                                                                     │
-│         ┌───────────────┬──────────────┬────────────────────┐      │
-│         │               │              │                    │      │
-│   ┌─────▼──────┐  ┌─────▼──────┐  ┌───▼──────┐  ┌─────────▼───┐  │
-│   │  DeepFace  │  │  wav2vec2  │  │   YOLO   │  │  PyAnnote   │  │
-│   │ (ArcFace)  │  │  (HF)      │  │  (v8)    │  │  Diarization│  │
-│   └────────────┘  └────────────┘  └──────────┘  └─────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow — Interview Session
-
-```
-Login (Face + Liveness + Voice + TOTP)
-    │
-    ▼
-JWT Token issued → sessionStorage
-    │
-    ▼
-Dashboard (/dashboard)
-    │
-    ▼
-Interview Setup (Mode + Company Persona + Topics/Resume)
-    │
-    ▼
-POST /interview/start ──► Ollama LLM ──► First Question
-    │
-    ▼
-Interview Loop:
-  Candidate answers (text or Deepgram voice)
-    │
-    ├──► POST /interview/respond ──► LLM evaluates + scores + next question
-    │         │
-    │         ├──► Adaptive difficulty update
-    │         ├──► InterviewLog persisted to SQLite
-    │         └──► WebSocket pushes security events
-    │
-    ├──► Background threads:
-    │         ├── Emotion analysis (gaze + speech confidence)
-    │         ├── YOLO multi-person detection
-    │         └── Speaker diarization
-    │
-    └──► POST /interview/end
-              │
-              ├──► LLM generates Strengths / Weaknesses / Topics to Study
-              ├──► Report signed with RSA-2048
-              ├──► Audit hash-chain finalized
-              └──► /report/:sessionId available
-```
-
----
-
-## 🔐 Security Model
-
-### Enrollment Flow (One-Time)
-```
-Step 1: Name + Email
-Step 2: 5 face captures → ArcFace embedding stored (pickled numpy, LargeBinary)
-Step 3: 8-second voice recording → wav2vec2 768-d embedding stored
-Step 4: Enrollment API → TOTP secret generated → QR code returned
-Step 5: Scan QR with Google Authenticator / Authy → verify code
-```
-
-### Login Flow (Every Session)
-```
-Candidate ID
-    │
-    ▼
-📷  Face biometric (DeepFace ArcFace cosine match)
-    │
-    ▼
-👁  Liveness detection (blink detection, prevents photo attacks)
-    │
-    ▼
-🎙  Voice biometric (wav2vec2 cosine similarity ≥ 0.60) [if enrolled]
-    │
-    ▼
-🔑  TOTP 6-digit code (30-second rotating, RFC 6238)
-    │
-    ▼
-✅  RS256 JWT issued — expires per session
-```
-
-### Report Integrity
-```
-Interview completes
-    │
-    ▼
-Report JSON assembled (scores, feedback, security events, emotion timeline)
-    │
-    ▼
-SHA-256 digest computed → signed with RSA-2048 private key
-    │
-    ▼
-Signature + public key embedded in report
-    │
-    ▼
-Anyone can verify: GET /report/:id/verify → { valid: true/false }
-```
-
-### Audit Hash Chain
-Every security event is stored with:
-```json
-{
-  "event_type": "QUESTION_ANSWERED",
-  "detail": { "score": 8.5, "difficulty": "hard" },
-  "previous_hash": "sha256(previous_entry)",
-  "entry_hash":    "sha256(event + previous_hash)"
-}
-```
-Breaking any event in the chain breaks all subsequent hashes → tamper-evident log.
+### 💻 Live Code Editor (Monaco)
+- VS Code engine (same as LeetCode, GitHub Codespaces)
+- 4 languages: Python · JavaScript · Java · C++
+- Isolated Docker sandbox per execution (`--network none --memory 128m --cpus 0.5`)
+- Bandit static analysis + custom pattern scanner before running
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Backend
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Web Framework | FastAPI 0.115 | Async REST API + WebSocket |
-| ORM | SQLAlchemy + SQLite | Database models, session/audit storage |
-| AI LLM | Ollama (Qwen2.5:7b) | Adaptive interview questions + feedback |
-| Face Auth | DeepFace (ArcFace) | Biometric face verification |
-| Voice Auth | HuggingFace wav2vec2-base | Voice embedding + cosine similarity |
-| Liveness | Dlib + OpenCV | Anti-spoofing blink detection |
-| Multi-person | YOLOv8 (Ultralytics) | Proctor monitor for extra people |
-| Transcription | Deepgram WebSocket API | Real-time streaming speech-to-text |
-| Diarization | PyAnnote.audio | Multiple speaker detection |
-| Audio Decode | Librosa + SciPy | WebM/OGG/WAV decoding from browser |
-| Cryptography | `cryptography` lib | RSA-2048 sign/verify, SHA-256 chain |
-| Auth | PyJWT (RS256) + PyOTP | JWT tokens + TOTP 2FA |
-| Resume Parse | PyMuPDF (fitz) | PDF text extraction |
-| Code Sandbox | subprocess + AST | Safe code execution + static analysis |
-| Emotion | OpenCV + librosa | Gaze + speech confidence analysis |
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| API Framework | **FastAPI 0.115** | Async, fast, automatic OpenAPI docs |
+| Database | **SQLAlchemy + SQLite** | Simple, portable, no external DB needed |
+| AI / LLM | **Ollama + Qwen2.5:7b** | Self-hosted, private, no API cost |
+| Face Auth | **DeepFace (ArcFace)** | State-of-the-art face recognition |
+| Voice Auth | **HuggingFace wav2vec2** | Proven voice embedding model |
+| Liveness | **Dlib + OpenCV** | Blink-based anti-spoofing |
+| Multi-person | **YOLOv8 (Ultralytics)** | Real-time person detection |
+| Transcription | **Deepgram nova-2 REST + WS** | Fast, accurate, Indian English optimised |
+| Diarization | **PyAnnote.audio** | Multi-speaker detection |
+| Cryptography | **`cryptography` (RSA-2048)** | Report signing, key management |
+| Auth | **PyJWT (RS256) + PyOTP** | Stateless JWT + TOTP 2FA |
+| Resume Parse | **PyPDF** | PDF text extraction |
 
 ### Frontend
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Framework | React 18 + Vite 5 | Fast SPA with HMR |
-| Routing | React Router v6 | Client-side navigation + ProtectedRoute |
-| HTTP Client | Axios | API calls with auth interceptor |
-| Charts | Recharts | Score progress chart, emotion timeline |
-| Code Editor | Monaco Editor (`@monaco-editor/react`) | VS Code-grade in-browser IDE |
-| Auth State | sessionStorage | Tab-scoped token storage (secure) |
-| Styling | Vanilla CSS | Dark glassmorphism design system |
-| Fonts | Google Fonts (Inter) | Premium typography |
-| WebSocket | Native WS API | Real-time security event stream |
-| MediaRecorder | Web API | Voice enrollment + login recording |
-| Deepgram | `@deepgram/sdk` | Browser-side streaming transcription |
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| Framework | **React 18 + Vite 5** | Fast HMR, optimised builds |
+| Routing | **React Router v6** | Protected routes, SPA navigation |
+| HTTP | **Axios** | Auth interceptor, 401 redirect |
+| Charts | **Recharts** | Score progress + emotion timeline |
+| Code Editor | **Monaco Editor** | VS Code engine in-browser |
+| Styling | **Vanilla CSS** | Dark glassmorphism, no framework bloat |
+| WebSocket | **Native WS API** | Real-time security events |
+
+---
+
+## 🏛️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        MIIC-Sec Platform                        │
+│                                                                 │
+│  React Frontend (Vite)         FastAPI Backend (port 8000)      │
+│  ┌─────────────────┐           ┌───────────────────────────┐   │
+│  │ /enroll         │◄──HTTP───►│ /auth/*   Biometrics      │   │
+│  │ /login          │◄──WS─────►│ /interview/* LLM + AI     │   │
+│  │ /dashboard      │           │ /user/*   Dashboard       │   │
+│  │ /interview      │           │ /report/* Signed Reports  │   │
+│  │ /report/:id     │           │ /security/* Proctoring    │   │
+│  └─────────────────┘           │ /ws/*    Live Events      │   │
+│                                └───────────┬───────────────┘   │
+│                                            │                    │
+│          ┌─────────────┬──────────┬────────┴──────────┐         │
+│    ┌─────▼──────┐ ┌────▼─────┐ ┌──▼──────┐ ┌─────────▼──┐     │
+│    │  Ollama    │ │ Deepgram │ │ SQLite  │ │  RSA-2048  │     │
+│    │ Qwen2.5:7b │ │ nova-2   │ │ SQLAlch │ │  Keys/JWT  │     │
+│    └────────────┘ └──────────┘ └─────────┘ └────────────┘     │
+│                                                                 │
+│    ┌────────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐    │
+│    │  DeepFace  │ │ wav2vec2 │ │  YOLO   │ │  PyAnnote   │    │
+│    │  ArcFace   │ │   HF     │ │   v8    │ │ Diarization │    │
+│    └────────────┘ └──────────┘ └─────────┘ └─────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Interview Session Data Flow
+
+```
+Enroll (face 5× + voice 8s + TOTP QR)
+    ↓
+Login: Face → Liveness → Voice → TOTP → RS256 JWT
+    ↓
+Dashboard → Interview Setup (mode + persona + topics/resume)
+    ↓
+POST /interview/start → Ollama LLM → First Question
+    ↓
+Loop per question:
+  Deepgram live voice / type answer
+    → POST /interview/respond → LLM score + feedback + next Q
+    → Adaptive difficulty update
+    → InterviewLog persisted to SQLite
+    → YOLO + emotion + diarization in background threads
+    ↓
+POST /interview/end
+  → LLM: Strengths / Weaknesses / Study Topics
+  → RSA-2048 sign report → save JSON
+  → /report/:sessionId
+```
+
+---
+
+## 🔐 Security Model
+
+### Login Flow (Sequential, must pass all 4)
+```
+① Face biometric     DeepFace ArcFace cosine match vs enrolled embedding
+② Liveness check     Dlib blink detection — blocks photo/video attacks
+③ Voice biometric    wav2vec2 cosine similarity ≥ 0.60
+④ TOTP 6-digit       30-second rotating code (RFC 6238)
+                     ↓
+                   RS256 JWT issued
+```
+
+### Continuous Proctoring (During Interview)
+- YOLO checks webcam frame every 30s → multiple persons detected → TOTP step-up challenge
+- Tab switch detected → warning → 3 warnings → session terminated
+- Voice stream analyzed for multiple speakers (PyAnnote diarization)
+- Face re-verification mid-session — mismatch triggers step-up
+
+### Cryptographic Report Integrity
+```python
+report_json = json.dumps(report, sort_keys=True)  # deterministic
+signature   = private_key.sign(report_json, PKCS1v15(), SHA256())
+# Embed base64 signature in report JSON
+# Verify: GET /report/:id/verify → { "valid": true }
+```
+
+### Audit Hash Chain
+Every security event stored with:
+```json
+{
+  "event_type": "QUESTION_ANSWERED",
+  "detail":     { "score": 8.5, "q_num": 3 },
+  "prev_hash":  "sha256(previous_event)",
+  "hash":       "sha256(this_event + prev_hash)"
+}
+```
+Tamper any one event → all subsequent hashes break → detectable.
 
 ---
 
@@ -288,68 +236,66 @@ Breaking any event in the chain breaks all subsequent hashes → tamper-evident 
 
 ```
 miic-sec/
-│
 ├── backend/
-│   ├── main.py                   # FastAPI app entry, CORS, lifespan, router registration
-│   ├── database.py               # SQLAlchemy models: Candidate, Session, InterviewLog, AuditLog
-│   ├── config.py                 # All constants: thresholds, URLs, paths, model names
+│   ├── main.py                 # FastAPI app, CORS, lifespan, router registration
+│   ├── config.py               # All constants: thresholds, model names, paths
+│   ├── database.py             # SQLAlchemy models: Candidate, Session, InterviewLog, AuditLog
 │   │
 │   ├── auth/
-│   │   ├── routes.py             # POST /auth/enroll, /login, /totp-verify-enrollment
-│   │   ├── face_auth.py          # DeepFace ArcFace enrollment + verification
-│   │   ├── voice_auth.py         # wav2vec2 voice embedding + cosine similarity
-│   │   ├── liveness.py           # Blink-detection liveness check
-│   │   ├── totp_auth.py          # PyOTP TOTP generation + QR code
-│   │   └── jwt_manager.py        # RS256 JWT creation + payload extraction
+│   │   ├── routes.py           # POST /auth/enroll, /login, /totp-verify-enrollment
+│   │   ├── face_auth.py        # DeepFace ArcFace enrollment + verification
+│   │   ├── voice_auth.py       # wav2vec2 voice embedding + cosine similarity
+│   │   ├── liveness.py         # Dlib blink-detection anti-spoofing
+│   │   ├── totp_auth.py        # PyOTP TOTP generation + QR code
+│   │   └── jwt_manager.py      # RS256 JWT issue + decode + middleware
 │   │
 │   ├── interview/
-│   │   ├── routes.py             # POST /start /respond /end /execute-code /upload-resume
-│   │   ├── llm_interviewer.py    # Ollama chat, adaptive session, company personas, end_session
-│   │   ├── adaptive_engine.py    # Sliding-window difficulty adjustment algorithm
-│   │   ├── dashboard.py          # GET /user/dashboard — profile + stats + history
-│   │   ├── topic_manager.py      # CS topic definitions + subtopic counts
-│   │   ├── resume_parser.py      # PyMuPDF PDF → structured context extraction
-│   │   ├── transcriber.py        # Audio transcription helpers
-│   │   ├── emotion_analysis.py   # Threaded gaze + speech confidence analysis
-│   │   └── code_sandbox.py       # Multi-language sandbox + AST static analysis
-│   │
-│   ├── crypto/
-│   │   ├── report_signer.py      # RSA-2048 sign, collect_session_data, save_report
-│   │   └── audit_log.py          # SHA-256 hash-chain audit log helpers
-│   │
-│   ├── report/
-│   │   └── routes.py             # GET /report/:id, /verify, /download (JWT-protected)
+│   │   ├── routes.py           # /interview/start, /respond, /end, /transcribe
+│   │   ├── llm_interviewer.py  # Adaptive Ollama LLM question/evaluation engine
+│   │   ├── transcriber.py      # Deepgram REST transcription (replaces Whisper)
+│   │   └── dashboard.py        # GET /user/dashboard — stats + history
 │   │
 │   ├── security/
-│   │   └── routes.py             # POST /tab-switch, /step-up-totp, identity re-check
+│   │   └── routes.py           # /security/face-recheck, /tab-switch, /step-up-verify
+│   │
+│   ├── report/
+│   │   └── routes.py           # GET /report/:id, /report/:id/verify
+│   │
+│   ├── crypto/
+│   │   ├── report_signer.py    # RSA-2048 sign/verify + report assembly
+│   │   └── audit_log.py        # SHA-256 hash-chain audit events
 │   │
 │   ├── verification/
-│   │   ├── continuous_verifier.py # Periodic face re-check during interview
-│   │   ├── diarization.py         # PyAnnote speaker diarization
-│   │   └── proxy_detector.py      # YOLO multi-person detection
+│   │   ├── proxy_detector.py   # YOLOv8 multi-person detection
+│   │   └── continuous_verifier.py # Background identity re-check loop
 │   │
-│   └── websocket/
-│       └── ws_manager.py          # WS connection manager — candidate + recruiter channels
+│   ├── websocket/
+│   │   └── ws_manager.py       # WebSocket ConnectionManager + event types
+│   │
+│   └── requirements.txt
 │
 ├── frontend/
-│   └── src/
-│       ├── main.jsx               # Router: /, /enroll, /login, /dashboard, /interview, /report/:id
-│       ├── index.css              # Dark glassmorphism design system (CSS variables)
-│       │
-│       └── pages/
-│           ├── Enrollment.jsx     # 6-step wizard: Info→Face→Voice→Enroll→TOTP→Done
-│           ├── Login.jsx          # 4-step: Candidate ID→Face→Voice→TOTP
-│           ├── Dashboard.jsx      # Stats, score chart, history table, LinkedIn share
-│           ├── Interview.jsx      # Live interview: Deepgram STT, code editor, WebSocket
-│           ├── InterviewSetup.jsx # Company persona + mode + topics + resume upload
-│           └── Report.jsx         # Signed report, emotion chart, security log, LinkedIn share
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Login.jsx        # 5-step sequential biometric login
+│   │   │   ├── Enroll.jsx       # Multi-step enrollment wizard
+│   │   │   ├── Dashboard.jsx    # Stats + score chart + history
+│   │   │   ├── Interview.jsx    # Main interview UI (Monaco + Deepgram voice)
+│   │   │   ├── InterviewSetup.jsx # Mode / persona / topic picker
+│   │   │   └── Report.jsx       # Full report viewer
+│   │   ├── utils/
+│   │   │   └── api.js           # Axios instance + sessionStorage auth store
+│   │   ├── App.jsx              # Router + ProtectedRoute
+│   │   └── index.css            # Dark glassmorphism design system
+│   ├── vite.config.js           # Dev proxy for /auth, /interview, /ws etc.
+│   └── Dockerfile
 │
-├── keys/                          # RSA keypair (auto-generated on first boot)
-│   ├── private_key.pem
-│   └── public_key.pem
-│
-├── reports/                       # Signed JSON reports (per session)
-└── requirements.txt               # All Python dependencies
+├── docker/
+│   └── Dockerfile.backend
+├── docker-compose.yml
+├── keys/                        # RSA keypair (auto-generated on first run)
+├── reports/                     # Signed JSON reports
+└── .env.example
 ```
 
 ---
@@ -357,922 +303,170 @@ miic-sec/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
+| Tool | Install |
+|------|---------|
+| Python 3.11+ | [python.org](https://python.org) |
+| Node.js 18+ | [nodejs.org](https://nodejs.org) |
+| Ollama | `brew install ollama` (macOS) |
+| Docker + Compose | [docker.com](https://docker.com) |
+
+### Option A — Local Development (Recommended)
+
 ```bash
-# Python 3.11+
-python --version
-
-# Node.js 18+
-node --version
-
-# Ollama (local LLM runtime)
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen2.5:7b
-
-# (Optional) HuggingFace token for speaker diarization
-export HF_TOKEN=your_hf_token
-```
-
-### 1. Clone & Setup Backend
-```bash
+# 1. Clone
 git clone https://github.com/Athar786-Ali/miic-sec.git
-cd miic-sec/backend
+cd miic-sec
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
+# 2. Pull LLM model (one-time, ~4 GB)
+ollama pull qwen2.5:7b
+ollama serve            # keep running
 
-# Install dependencies
+# 3. Backend
+cd backend
 pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-Create `backend/.env`:
-```env
-# Deepgram API key (get free key at deepgram.com)
-DEEPGRAM_API_KEY=your_deepgram_api_key
-
-# HuggingFace token (for speaker diarization — optional)
-HF_TOKEN=your_huggingface_token
-
-# Ollama (default: local)
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:7b
-```
-
-### 3. Start Backend
-```bash
-# In one terminal — start Ollama
-ollama serve
-
-# In another terminal — start FastAPI
-cd miic-sec/backend
-source venv/bin/activate
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
 
-Expected startup output:
-```
-✅ Database initialized — all tables created.
-
-════════════════════════════════════════════════════
-  MIIC-Sec — System Status
-════════════════════════════════════════════════════
-  Database                        ✅ ready
-  RSA-2048 keys                   ✅ ready
-  Ollama LLM                      ✅ connected
-  Speaker diarization (HF_TOKEN)  ✅ enabled
-════════════════════════════════════════════════════
-  Docs:  http://localhost:8000/docs
-  WS:    ws://localhost:8000/ws/candidate/{session_id}
-════════════════════════════════════════════════════
-```
-
-### 4. Start Frontend
-```bash
-cd miic-sec/frontend
+# 4. Frontend (new terminal)
+cd frontend
 npm install
 npm run dev
-# → http://localhost:5173
 ```
 
-### 5. First Use
-1. Open `http://localhost:5173/enroll`
-2. Enter your name and email
-3. Capture 5 face photos
-4. Record 8 seconds of voice
-5. Scan the TOTP QR with Google Authenticator / Authy
-6. Log in at `/login` → lands on your **Dashboard**
-7. Click **Start New Mock Interview** → choose company persona + mode → practice!
+| Service | URL |
+|---------|-----|
+| 🌐 Frontend | http://localhost:3000 |
+| ⚙️ Backend API | http://localhost:8000 |
+| 📖 Swagger UI | http://localhost:8000/docs |
+
+### Option B — Docker Compose
+
+```bash
+cd miic-sec
+docker compose up --build
+
+# First time: pull the LLM inside the container
+docker exec -it miic_ollama ollama pull qwen2.5:7b
+```
+
+### Environment Variables (`backend/.env`)
+
+```env
+DEEPGRAM_API_KEY=your_deepgram_key    # Real-time STT
+HF_TOKEN=hf_your_token               # Optional: PyAnnote diarization
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES  # macOS only
+```
+
+> 💡 RSA keypair is auto-generated in `keys/` on first startup — no manual setup needed.
 
 ---
 
 ## 📡 API Reference
 
-### Authentication
+### Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/auth/enroll` | Enroll candidate (face + voice + TOTP setup) |
-| `POST` | `/auth/login` | Login with face + voice + TOTP → JWT |
-| `POST` | `/auth/totp-verify-enrollment` | Verify TOTP code during enrollment |
+| `POST` | `/auth/enroll` | Register: face + voice + TOTP setup |
+| `POST` | `/auth/login` | Biometric login → JWT |
+| `POST` | `/auth/totp-verify-enrollment` | Confirm TOTP setup |
 
 ### Interview
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/interview/start` | ✅ JWT | Start session (mode, company_target, topics, resume) |
-| `POST` | `/interview/respond` | ✅ JWT | Submit answer → get score + next question |
-| `POST` | `/interview/end` | ✅ JWT | Finalise → generate LLM feedback + signed report |
-| `GET`  | `/interview/status` | ✅ JWT | Live session progress |
-| `POST` | `/interview/upload-resume` | ✅ JWT | Parse PDF resume → return context string |
-| `GET`  | `/interview/topics` | ✅ JWT | Available CS topics with subtopic counts |
-| `POST` | `/interview/execute-code` | ✅ JWT | Sandbox execute code (Python / JS / Java) |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/interview/start` | Start session with mode/persona/topics |
+| `POST` | `/interview/respond` | Submit answer → score + next question |
+| `POST` | `/interview/end` | End session → sign report |
+| `POST` | `/interview/transcribe` | Audio → Deepgram text (REST) |
+| `GET`  | `/interview/deepgram-token` | Issue temporary Deepgram key |
+| `POST` | `/interview/upload-resume` | Parse PDF resume |
 
-### Dashboard
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET`  | `/user/dashboard` | ✅ JWT | Profile + stats + full session history |
+### Security
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/security/face-recheck` | YOLO + face mid-session check |
+| `POST` | `/security/tab-switch` | Log tab switch event |
+| `POST` | `/security/step-up-verify` | TOTP step-up after mismatch |
 
-### Reports
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET`  | `/report/{session_id}` | ✅ JWT | Full signed report JSON |
-| `GET`  | `/report/{session_id}/verify` | ✅ JWT | Verify RSA signature integrity |
-| `GET`  | `/report/{session_id}/download` | ✅ JWT | Download report as JSON file |
-
-### Security / Proctoring
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/security/tab-switch` | ✅ JWT | Register tab-switch event |
-| `POST` | `/security/step-up-totp` | ✅ JWT | Submit TOTP for identity re-challenge |
-| `POST` | `/security/face-recheck` | ✅ JWT | Manual face re-verification |
-
-### WebSocket
-| URL | Description |
-|-----|-------------|
-| `ws://localhost:8000/ws/candidate/{session_id}` | Live security events for candidate |
-| `ws://localhost:8000/ws/recruiter/{session_id}` | Live security event mirror for proctor |
-
-**Interactive docs:** `http://localhost:8000/docs`
+### Reports & Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/report/:session_id` | Fetch signed report |
+| `GET`  | `/report/:session_id/verify` | Verify RSA signature |
+| `GET`  | `/user/dashboard` | Stats + full interview history |
+| `WS`   | `/ws/candidate/:session_id` | Real-time security event stream |
 
 ---
 
-## 🎯 Interview Modes Explained
+## 🗄️ Database Schema
 
-### 📚 Topic Based
-Select one or more CS topics from:
-> Data Structures & Algorithms · Operating Systems · Database Management Systems · Object-Oriented Programming · Computer Networks · System Design · Web Development · Machine Learning · Cloud Computing · Software Engineering Principles
-
-### 📄 Resume Based
-Upload your PDF resume → AI parses it and extracts:
-- Skills, Technologies, Frameworks
-- Work Experience and Projects
-- Education History
-
-The interviewer asks questions directly tied to **what you claim on your resume**.
-
-### 🔗 Combined Mode
-Resume-aware questions **+** selected topic questions, interleaved by the adaptive engine.
-
----
-
-## 🏢 Company AI Personas
-
-### 🏢 Service Based (TCS / Wipro / Infosys)
-> **LLM Prompt Injection:** *"Focus on theoretical CS fundamentals, basic OOP definitions, commonly-asked HR concepts, straightforward logic questions, and SQL basics. Avoid extremely advanced topics. Keep questions clear and approachable."*
-
-### 🚀 Product / FAANG (Google / Amazon / Microsoft)
-> **LLM Prompt Injection:** *"Focus on deep conceptual understanding, algorithmic thinking, edge cases, system design trade-offs, and optimal time/space complexity analysis. Cross-question the candidate's reasoning. Challenge weak or vague answers. Ask follow-up questions to test depth."*
-
-### ⚡ Startup
-> **LLM Prompt Injection:** *"Focus almost entirely on practical implementation skills, framework-specific knowledge, real-world problem solving, and project-based questions from the candidate's resume. Ask about trade-offs they made in past projects, how they handle ambiguity, and their ability to ship working software quickly. Value pragmatism over theory."*
-
----
-
-## 📊 Scoring & Recommendations
-
-| Score Range | Label | Meaning |
-|-------------|-------|---------|
-| **≥ 7.5 / 10** | 🏆 EXCELLENT | Ready for placement — strong candidate |
-| **≥ 5.0 / 10** | 📈 NEEDS PRACTICE | Good foundation, needs more depth |
-| **< 5.0 / 10** | 📉 POOR | Significant gaps — keep practicing |
-
-Scores are computed per-question by the LLM on a 0–10 scale, then averaged.  
-The adaptive engine raises difficulty when recent scores are high, and lowers it when they are low.
-
----
-
-## 🔒 Security Hardening Notes
-
-- **No secrets in git** — `.env` file excluded via `.gitignore`
-- **RSA keys auto-generated** on first boot and stored in `keys/` (also git-excluded)
-- **Deepgram tokens** auto-revoke after the WebSocket session closes
-- **sessionStorage** used for JWT (not localStorage) — cleared when tab closes
-- **Voice tokens** are temp-keys requested server-side, never exposing the real API key to the browser
-- **CORS** restricted to localhost origins in production
-- **Code sandbox** uses subprocess with 5s timeout, blocked imports list, and static AST analysis before execution
-
----
-
-## 🌐 Environment Variables Reference
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DEEPGRAM_API_KEY` | ✅ Yes | — | Deepgram API key for real-time STT |
-| `HF_TOKEN` | Optional | — | HuggingFace token for PyAnnote diarization |
-| `OLLAMA_URL` | Optional | `http://localhost:11434` | Ollama server base URL |
-| `OLLAMA_MODEL` | Optional | `qwen2.5:7b` | Primary LLM model name |
-| `DATABASE_URL` | Optional | `sqlite:///./miic.db` | SQLAlchemy database connection string |
-| `VOICE_SIMILARITY_THRESHOLD` | Optional | `0.60` | Minimum voice cosine similarity for auth |
-
----
-
-## 🛣️ Roadmap
-
-### ✅ Completed
-- [x] 5-tier biometric authentication (Face + Liveness + Voice + TOTP + Multi-person)
-- [x] Adaptive AI interviewer (Ollama Qwen2.5)
-- [x] Real-time voice transcription (Deepgram WebSocket)
-- [x] Cryptographically signed tamper-evident reports (RSA-2048)
-- [x] Hash-chain audit log (blockchain-style tamper detection)
-- [x] Student dashboard with analytics + score progress chart
-- [x] Company-specific AI personas (Service / FAANG / Startup)
-- [x] LinkedIn verified report sharing
-- [x] Live code execution sandbox (Python, JavaScript, Java, C++)
-- [x] Resume-based adaptive questioning
-- [x] Voice enrollment + login biometrics
-- [x] **Monaco Editor (LeetCode-style)** — VS Code engine with 4 languages, minimap, IntelliSense, Ctrl+Enter run
-- [x] Docker Compose full-stack deployment (Ollama + FastAPI + React)
-- [x] 6-phase pytest test suite (infrastructure → integration)
-
-### 🔜 Upcoming
-- [ ] Public shareable report URLs with unique slugs
-- [ ] Multi-user admin panel for batch sessions
-- [ ] Mobile-responsive layout improvements
-- [ ] Interview recording & playback (video + audio)
-- [ ] Email report delivery (SMTP integration)
-- [ ] PostgreSQL support for high-concurrency production deployments
-- [ ] Role-based access control (Admin / Recruiter / Candidate)
-
----
-
-## 👤 Author
-
-**Md. Athar Ali**  
-Full-Stack Developer | AI Systems Builder | Security Enthusiast
-
-[![GitHub](https://img.shields.io/badge/GitHub-Athar786--Ali-181717?style=flat-square&logo=github)](https://github.com/Athar786-Ali)
-
----
-
-## 🖥️ Monaco Editor — Feature Showcase
-
-The in-interview code editor is built with the same Monaco engine that powers **VS Code** and **LeetCode**.
-
-### Editor Toolbar
 ```
-[ 🐍 Python 3 ] [ 🟨 JavaScript ] [ ☕ Java ] [ ⚙️ C++ ]    [A-] [14] [A+]    [↺ Reset]    [▶ Run  Ctrl+↵]
-```
-
-### Tab System
-```
-[ 📝 Code ]  [ 🖥 Output ✓ ]                          Python 3 · 12 lines
-─────────────────────────────────────────────────────────────────────
-  Monaco editor (380px, vs-dark, minimap on right)
-─────────────────────────────────────────────────────────────────────
-🐍 Python 3          UTF-8          Tab Size: 4          MIIC-Sec Sandbox
-```
-
-### Output Panel States
-| State | Display |
-|-------|---------|
-| Not run yet | `▶ Press Run or Ctrl+Enter to execute your code` |
-| Running | Animated spinner + `Executing in sandbox…` |
-| Passed | `✅ All Tests Passed · 142ms total · 38ms exec` |
-| Failed | `❌ Runtime Error / Failed` + red stderr output |
-| TLE | `❌ Time Limit Exceeded` |
-| Security warning | `⚠ 1 security warning [HIGH] Use of eval() is forbidden` |
-
-### Keyboard Shortcuts
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Enter` / `Cmd+Enter` | Run code in sandbox |
-| `Ctrl+/` | Toggle line comment |
-| `Ctrl+D` | Select next occurrence |
-| `Alt+↑` / `Alt+↓` | Move line up / down |
-| `Ctrl+Space` | Trigger IntelliSense |
-| `Ctrl+Z` | Undo |
-
----
-
-## 🛠️ Troubleshooting
-
-### Backend won't start — `ImportError: cannot import name 'get_token_payload'`
-```bash
-# Fixed in commit bf478c5 — pull latest
-git pull origin main
-```
-`get_token_payload` is now exported from `auth/jwt_manager.py` (canonical location).
-
-### Enrollment stuck / taking too long
-- **Expected on first run** — DeepFace downloads ArcFace model (~200 MB) and wav2vec2 downloads from HuggingFace (~360 MB).
-- The UI shows an animated **5-stage progress indicator**: 📤 Uploading → 👤 Face Processing → 🎙️ Voice Processing → 🔑 TOTP Generation → 💾 Saving.
-- Heavy biometric ops (DeepFace, wav2vec2) now run in `asyncio.to_thread` — the server stays responsive during first-run model downloads.
-- Subsequent enrollments take **~10–20 seconds**.
-- Check backend terminal for detailed logs if it fails.
-
-### `InvalidStateError: Cannot close a closed AudioContext`
-- Fixed in latest commit — `retry()` and `useEffect` cleanup now guard with `ctxRef.current.state !== 'closed'` before calling `.close()`.
-
-### Voice recording not working
-- Allow microphone permission in browser settings.
-- Use Chrome or Firefox (Safari has limited `MediaRecorder` support).
-- Check that no other app is exclusively locking the microphone.
-
-### Ollama LLM not responding
-```bash
-# Make sure Ollama is running
-ollama serve
-
-# Check model is pulled
-ollama list
-
-# Pull if missing
-ollama pull qwen2.5:7b
-```
-
-### Face verification fails at login
-- Ensure good, consistent lighting — same conditions as during enrollment.
-- Re-enroll with better photos if verification keeps failing.
-- The threshold is cosine similarity ≥ 0.40 (ArcFace) — adjustable in `config.py`.
-
-### Code sandbox shows "Docker not running"
-```bash
-# Start Docker Desktop, then verify
-docker info
-
-# Pull the Python sandbox image (first use)
-docker pull python:3.11-slim
+Candidate       — id, name, email, face_embedding (blob), voice_embedding (blob), totp_secret
+Session         — id, candidate_id, status, started_at, ended_at, final_score
+InterviewLog    — id, session_id, question_number, question_text, response_text, score, difficulty
+AuditLog        — id, session_id, event_type, detail (json), prev_hash, entry_hash, timestamp
 ```
 
 ---
 
-## 🔁 Git History — Key Commits
+## 🧠 AI Pipeline Details
 
-| Commit | Description |
-|--------|-------------|
-| *(latest)* | fix: non-blocking enrollment/login via `asyncio.to_thread` + animated stage progress UI |
-| `058fa83` | docs: update README — v1.1.0 changelog, roadmap, new badges, contact section |
-| `17d8db1` | docs: add Docker Compose, Testing, Performance, FAQ, Changelog sections to README |
-| `e90385e` | docs: add 9 deep-dive sections to README (no existing content changed) |
-| `9c23735` | docs: enhance README with Monaco editor docs, troubleshooting, git history |
-| `bf478c5` | fix: resolve `ImportError` for `get_token_payload` on server startup |
-| `697f2d4` | feat: LeetCode-style Monaco Editor integration (4 langs, minimap, Ctrl+Enter) |
-| `b230b74` | docs: comprehensive professional README |
-| `573105b` | feat: B2C Student Platform — Dashboard, Company AI Personas, LinkedIn Share |
-| `c94cadb` | feat: full bug-fixes + voice authentication implementation |
-| `7f39cc4` | feat: integrated Deepgram real-time voice transcription |
-| `cf9c694` | feat: Phase 4 — WebSocket manager, continuous verifier, proxy detector, diarization |
-| `ceca3d3` | feat: Phase 3 — LLM interview engine, emotion analysis, code sandbox, adaptive difficulty |
-| `9e69208` | feat: Phase 2 — face auth, voice auth, TOTP, JWT, audit log |
-| `d9982f0` | feat: Phase 1 — project setup, RSA keys, database schema, config |
-
----
-
-## 🐳 Docker Compose Deployment
-
-The platform ships with a full **Docker Compose** stack — spin up Ollama, FastAPI, and React in one command.
-
-### Services
-
-| Service | Container | Port | Description |
-|---------|-----------|------|-------------|
-| `ollama` | `miic_ollama` | `11434` | Local LLM runtime (Qwen2.5:7b) |
-| `backend` | `miic_backend` | `8000` | FastAPI REST + WebSocket server |
-| `frontend` | `miic_frontend` | `3000` | React SPA (production build) |
-
-### Start the Full Stack
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/Athar786-Ali/miic-sec.git
-cd miic-sec
-
-# 2. Create the .env file (required)
-cp backend/.env.example backend/.env
-# → Fill in DEEPGRAM_API_KEY and optionally HF_TOKEN
-
-# 3. Pull the LLM model into the Ollama volume
-docker compose up ollama -d
-docker compose exec ollama ollama pull qwen2.5:7b
-
-# 4. Launch the full platform
-docker compose up --build
-```
-
-> **Ports:** Frontend → `http://localhost:3000` · Backend API → `http://localhost:8000` · Ollama → `http://localhost:11434`
-
-### Compose Architecture
-
-```
-docker-compose.yml
-│
-├── ollama       — ollama/ollama image, healthcheck on /api/tags
-│                  volume: ollama_data (persists pulled models)
-│
-├── backend      — built from docker/Dockerfile.backend
-│                  mounts ./keys and ./reports for persistence
-│                  depends_on: ollama (healthy)
-│
-└── frontend     — built from frontend/Dockerfile
-                   depends_on: backend (healthy)
-```
-
-### Environment Variables for Docker
-
-```env
-# Required
-DEEPGRAM_API_KEY=your_deepgram_key
-
-# Optional — enables PyAnnote speaker diarization
-HF_TOKEN=your_huggingface_token
-
-# Auto-set by compose (do not override)
-OLLAMA_URL=http://ollama:11434
-```
-
-> **ARM / Apple Silicon (M1/M2):** The Ollama service is already configured with `platform: linux/arm64` for native M1 performance.
-
----
-
-## 🧪 Testing
-
-MIIC-Sec ships with a structured **6-phase test suite** covering every layer of the platform — from infrastructure to AI pipelines.
-
-### Run All Tests
-
-```bash
-# From the repo root
-cd miic-sec
-source backend/venv/bin/activate
-pip install pytest pytest-asyncio httpx
-
-pytest tests/ -v
-```
-
-### Run a Specific Phase
-
-```bash
-pytest tests/test_phase1.py -v   # Infrastructure & RSA keys
-pytest tests/test_phase2.py -v   # Auth: TOTP, JWT, audit log
-pytest tests/test_phase3.py -v   # Interview engine & adaptive AI
-pytest tests/test_phase4.py -v   # Security, WebSocket, proctoring
-pytest tests/test_phase5.py -v   # Reports, signing, verification
-pytest tests/test_phase6.py -v   # Integration & end-to-end flows
-```
-
-### Test Coverage by Phase
-
-| Phase | File | What's Tested |
-|-------|------|---------------|
-| **Phase 1** | `test_phase1.py` | RSA keypair existence, DB table creation, config constants, `/health` endpoint |
-| **Phase 2** | `test_phase2.py` | TOTP generation/verification, RS256 JWT create/verify/expiry, audit hash-chain integrity, tamper detection, embedding serialization |
-| **Phase 3** | `test_phase3.py` | LLM adaptive engine, sliding-window difficulty, topic manager, resume parser, code sandbox execution & security analysis |
-| **Phase 4** | `test_phase4.py` | WebSocket event broadcasting, YOLO multi-person detection, speaker diarization, continuous face re-verification, tab-switch registration |
-| **Phase 5** | `test_phase5.py` | RSA-2048 report signing, SHA-256 hash, signature verification, report download, public report integrity check |
-| **Phase 6** | `test_phase6.py` | Full enrollment → login → interview → report end-to-end integration flow |
-
-### Test Highlights
-
+### Adaptive Difficulty Algorithm
 ```python
-# Audit hash-chain tamper detection (test_phase2.py)
-def test_chain_breaks_on_tamper(self):
-    # Tamper with entry 2's detail in the DB
-    db_entry.detail = '{"x": 999}'   # ← modified
-    result = verify_audit_chain("sess-tamper", self.db)
-    assert result["valid"] is False   # ← chain broken ✅
+# After each answer, recalculate difficulty from last 3 scores
+window = scores[-3:]
+avg = mean(window)
+if avg >= 7.5:   next_difficulty = "hard"
+elif avg >= 4.5: next_difficulty = "medium"
+else:            next_difficulty = "easy"
+```
 
-# Expired JWT rejection (test_phase2.py)
-def test_expired_token_rejected(self):
-    # Token expired 1 hour ago
-    payload["exp"] = now - timedelta(hours=1)
-    result = verify_token(expired_token)
-    assert result is None             # ← correctly rejected ✅
+### Ollama LLM Prompt Structure
+Each question prompt includes:
+- Candidate's job role + company persona system instructions
+- Conversation history (Q&A pairs)
+- Current difficulty target
+- Resume context (if resume mode)
+- Selected topics (if topic mode)
+
+### Voice Authentication Flow
+```python
+# Enrollment: 10s recording → wav2vec2 → 768-d embedding → stored as pickle blob
+# Login:       5s recording  → wav2vec2 → 768-d embedding
+# Verify:      cosine_similarity(stored, live) >= 0.60 → pass
 ```
 
 ---
 
-## ⚡ Performance Benchmarks
+## 🐛 Troubleshooting
 
-Approximate timings measured on **Apple M1 Pro (16 GB RAM)** — CPU only, no GPU.
-
-### First-Run (cold start, model downloads)
-| Stage | Time |
-|-------|------|
-| DeepFace ArcFace model download | ~2–4 min |
-| wav2vec2-base download (HuggingFace) | ~1–2 min |
-| Ollama Qwen2.5:7b download | ~8–15 min |
-| Total first-run setup | **~15–20 min** |
-
-### Steady-State (warm, models cached)
-| Operation | Typical Latency |
-|-----------|----------------|
-| Face enrollment (5 captures → embedding) | 10–20 s |
-| Face verification at login | 2–5 s |
-| Voice embedding (8-second clip) | 3–8 s |
-| TOTP verification | < 100 ms |
-| JWT sign + issue | < 10 ms |
-| Interview start (first LLM question) | 3–8 s |
-| LLM response + scoring | 5–15 s |
-| Code execution (Python, sandbox) | 1–3 s |
-| Report signing (RSA-2048) | < 50 ms |
-| Deepgram STT (real-time streaming) | ~200 ms lag |
-
-> **GPU acceleration:** Running on a CUDA GPU (RTX 3080+) cuts DeepFace and wav2vec2 times by ~5–10×.
+| Problem | Solution |
+|---------|----------|
+| `ollama: connection refused` | Run `ollama serve` in a separate terminal |
+| `CUDA out of memory` | App runs on CPU — no GPU needed |
+| `Face not detected` | Ensure good lighting, face camera directly |
+| `TOTP code invalid` | Check phone clock is synced (NTP) |
+| `Deepgram token error` | Check `DEEPGRAM_API_KEY` in `backend/.env` |
+| `Module not found` | Run `pip install -r requirements.txt` again |
+| `Port 8000 in use` | `lsof -ti:8000 \| xargs kill -9` |
 
 ---
 
-## ❓ FAQ
-
-**Q: Does my biometric data leave my machine?**  
-A: No. Face embeddings (ArcFace), voice embeddings (wav2vec2), and TOTP secrets are stored **locally** in the SQLite database. Only audio is sent to **Deepgram** for real-time speech-to-text transcription (opt-in), and LLM prompts go to **Ollama** which runs locally.
-
-**Q: Can I run MIIC-Sec without a GPU?**  
-A: Yes. All models (DeepFace, wav2vec2, YOLOv8, Ollama) run on CPU. Performance is slower on first load but fully functional.
-
-**Q: What happens if I don't set `HF_TOKEN`?**  
-A: Speaker diarization (PyAnnote.audio) is skipped. All other features (face auth, voice auth, YOLO, Deepgram, LLM) work normally.
-
-**Q: Is the code sandbox safe to run arbitrary code?**  
-A: It uses a combination of **Bandit static analysis**, **AST import blocking**, and **subprocess isolation** with a 5-second timeout. For production use, the Docker sandbox mode (`--network none --memory 128m --cpus 0.5 --read-only`) provides full isolation.
-
-**Q: Can I use a different LLM instead of Qwen2.5:7b?**  
-A: Yes. Change `OLLAMA_MODEL` in your `.env` or `config.py`. Any model available via `ollama pull` works (e.g., `llama3:8b`, `mistral:7b`, `gemma:7b`).
-
-**Q: How do I reset a candidate's enrollment?**  
-A: Delete the candidate record from SQLite (`DELETE FROM candidates WHERE candidate_id='...'`) and the session data. The user can re-enroll from `/enroll`.
-
-**Q: Why `sessionStorage` instead of `localStorage` for the JWT?**  
-A: `sessionStorage` is scoped to the browser tab. When the tab closes, the token is automatically cleared — preventing stale tokens from persisting across sessions. This is a deliberate security choice.
-
-**Q: Can multiple candidates use the platform simultaneously?**  
-A: Yes. Sessions are UUID-isolated, WebSocket channels are per-session, and the SQLite ORM uses connection pooling. For high concurrency (50+ concurrent users), swap SQLite for PostgreSQL via `DATABASE_URL`.
-
----
-
-## 📅 Changelog
-
-### v1.2.0 — May 29, 2026 (Latest)
-- ⚡ **Non-blocking biometric pipeline** — DeepFace, wav2vec2, and liveness detection now run in `asyncio.to_thread`, keeping the FastAPI event loop fully responsive during heavy first-run model downloads
-- 🎞️ **Animated enrollment stage progress** — real-time 5-stage indicator (📤 Uploading → 👤 Face → 🎙️ Voice → 🔑 TOTP → 💾 Saving) replaces the generic spinner
-- 🔧 **`AudioContext` cleanup fix** — `retry()` and `useEffect` teardown now guard with `ctx.state !== 'closed'` before calling `.close()`, eliminating `InvalidStateError` on retry
-- 🛡️ **Improved error reporting** — enrollment errors now surface structured JSON detail from the backend (not just generic messages)
-- 🚀 **Enrollment timeout extended to 10 min** — accommodates first-run wav2vec2 + DeepFace model downloads (~560 MB total)
-
-### v1.1.0 — May 2026
-- 🔧 Improved enrollment flow UX with animated step-by-step progress indicators
-- 🔧 Fixed `InvalidStateError` in AudioContext cleanup on retry
-- 🔧 Resolved `ImportError` for `get_token_payload` on backend startup
-- 🛡️ Hardened session tab-switch detection and TOTP step-up re-auth
-- 📝 Expanded README with deep-dive sections: Adaptive Engine, Auth, Voice Pipeline, Reports, WebSocket Events, Dependencies, Performance, FAQ
-
-### v1.0.0 — May 2025
-- ✅ 5-tier biometric authentication pipeline (Face → Liveness → Voice → TOTP → YOLO)
-- ✅ Adaptive AI interviewer with 3 company personas and 3 interview modes
-- ✅ Real-time Deepgram WebSocket speech-to-text
-- ✅ Monaco Editor (LeetCode-style) with 4 languages and Docker sandbox
-- ✅ Cryptographically signed RSA-2048 reports with SHA-256 audit hash chain
-- ✅ Student dashboard: score progress chart, session history, LinkedIn share
-- ✅ Resume-based adaptive questioning (PyMuPDF PDF parsing)
-- ✅ Speaker diarization (PyAnnote.audio)
-- ✅ Continuous face re-verification with step-up TOTP challenge
-- ✅ WebSocket live proctoring stream (candidate + recruiter channels)
-- ✅ 6-phase pytest test suite (infrastructure → integration)
-- ✅ Docker Compose full-stack deployment
-
-### Planned — v1.3.0
-- [ ] Public shareable report URLs with unique slugs
-- [ ] Multi-user admin panel for batch interview sessions
-- [ ] Mobile-responsive layout improvements
-- [ ] Interview recording & playback (video + audio)
-- [ ] Email report delivery (SMTP integration)
-- [ ] PostgreSQL support for production multi-user deployments
-- [ ] Role-based access control (Admin / Recruiter / Candidate)
-
----
-
-## 🧠 How the Adaptive Engine Works
-
-The adaptive difficulty system is a **sliding-window scoring algorithm** that dynamically adjusts interview pressure in real time.
-
-```
-Candidate answers question
-        │
-        ▼
-LLM scores response (0–10)
-        │
-        ▼
-Score appended to window  ──►  [ 8.5, 7.0, 9.0 ]  (last N answers)
-        │
-        ▼
-Window average computed
-        │
-    ┌───┴────────────────────────────────┐
-    │  avg ≥ 7.5  →  increase difficulty │
-    │  avg ≤ 4.5  →  decrease difficulty │
-    │  4.5–7.5    →  maintain difficulty  │
-    └────────────────────────────────────┘
-        │
-        ▼
-Difficulty tag injected into next LLM prompt
-  ("Ask an easy/medium/hard question about...")
-        │
-        ▼
-Badge shown in UI: [ easy ] / [ medium ] / [ hard ]
-```
-
-**Window size:** 3 answers (configurable in `adaptive_engine.py`)  
-**Difficulty levels:** `easy` → `medium` → `hard`  
-**Effect:** Candidates who perform well are automatically challenged more; struggling candidates get confidence-building questions.
-
----
-
-## 🔑 Authentication Deep Dive
-
-### JWT Token Anatomy
-```json
-{
-  "candidate_id": "uuid-v4",
-  "session_id":   "uuid-v4",
-  "mfa_passed":   true,
-  "iat": 1716000000,
-  "exp": 1716086400,
-  "alg": "RS256"
-}
-```
-- **Algorithm:** RS256 (asymmetric — only backend can sign, anyone can verify)
-- **Expiry:** Configurable via `JWT_EXPIRY_HOURS` in `config.py`
-- **Storage:** `sessionStorage` (cleared on tab close — not persistent across browser sessions)
-- **Transport:** `Authorization: Bearer <token>` header on every request
-
-### Session State Machine
-```
-PENDING ──► ACTIVE ──► COMPLETED
-               │
-               ├──► TERMINATED  (security violation)
-               └──► ABANDONED   (tab closed / timeout)
-```
-
-### Step-Up Authentication
-If face mismatch is detected **mid-interview**, the session is not immediately terminated. Instead:
-1. WebSocket pushes `STEP_UP_TOTP_REQUIRED` to candidate
-2. A modal overlay appears asking for TOTP code
-3. If verified → session continues (green status)
-4. If failed → `SESSION_TERMINATED` is broadcast
-
----
-
-## 📈 Dashboard Analytics
-
-The student dashboard (`/dashboard`) provides rich session analytics:
-
-| Metric | Source | Description |
-|--------|--------|-------------|
-| Total Interviews | `Session` table | Count of all completed sessions |
-| Average Score | `InterviewLog` | Mean of all question scores across all sessions |
-| Personal Best | `InterviewLog` | Highest single-session average |
-| Monthly Activity | `Session.started_at` | Sparkline of sessions per month |
-| Score Progress | `InterviewLog` | Per-session average plotted as area chart |
-| Interview History | `Session + AuditLog` | Sortable table with date, mode, score, recommendation |
-
-### Score Chart
-Built with **Recharts** — interactive area chart with:
-- Gradient fill (purple → transparent)
-- Hover tooltips showing session date + score
-- Responsive container (adapts to screen width)
-- Custom dot for each data point
-
----
-
-## 🎙️ Voice Biometric Pipeline
-
-### Enrollment (8-second recording)
-```
-Browser MediaRecorder (audio/webm;codecs=opus)
-        │
-        ▼
-POST /auth/enroll  [multipart voice_audio field]
-        │
-        ▼
-librosa.load(buffer, sr=16000, mono=True)   ← decode WebM/OGG/WAV
-        │
-        ▼
-wav2vec2-base  →  768-dimensional embedding
-        │
-        ▼
-np.ndarray pickled  →  stored in Candidate.voice_embedding (LargeBinary)
-```
-
-### Verification (login)
-```
-Browser records voice clip
-        │
-        ▼
-librosa decode → wav2vec2 → 768-d vector
-        │
-        ▼
-cosine_similarity(enrolled_embedding, live_embedding)
-        │
-    ┌───┴───────────────────────────────────────┐
-    │  similarity ≥ 0.60  →  ✅ voice verified  │
-    │  similarity < 0.60  →  ❌ login rejected   │
-    └───────────────────────────────────────────┘
-```
-
-**Threshold:** `VOICE_SIMILARITY_THRESHOLD = 0.60` (tunable in `.env`)  
-**Model:** `facebook/wav2vec2-base` via HuggingFace Transformers (runs 100% locally)  
-**Fallback:** If candidate didn't enroll voice, login skips Tier 3 automatically
-
----
-
-## 🧾 Report Structure
-
-Every completed interview generates a cryptographically signed JSON report:
-
-```json
-{
-  "session_id":        "uuid",
-  "candidate_id":      "uuid",
-  "candidate_name":    "Md. Athar Ali",
-  "started_at":        "2025-05-23T02:00:00Z",
-  "ended_at":          "2025-05-23T02:20:00Z",
-  "mode":              "topic_based",
-  "company_target":    "product",
-  "topics":            ["DSA", "System Design"],
-  "difficulty":        "hard",
-  "average_score":     8.2,
-  "recommendation":    "EXCELLENT",
-  "questions_log": [
-    {
-      "question_number": 1,
-      "question":        "Explain the difference between BFS and DFS...",
-      "answer":          "BFS uses a queue and explores level by level...",
-      "score":           9,
-      "feedback":        "Excellent explanation with correct time complexity.",
-      "difficulty":      "medium",
-      "input_mode":      "voice"
-    }
-  ],
-  "llm_feedback": {
-    "strengths":         ["Strong algorithmic thinking", "Clear communication"],
-    "weaknesses":        ["Depth on distributed systems"],
-    "topics_to_study":   ["Consistent hashing", "CAP theorem"],
-    "overall":           "Ready for FAANG-level interviews with minor prep."
-  },
-  "security_summary": {
-    "tab_switches":      0,
-    "totp_challenges":   0,
-    "multiple_persons":  false,
-    "voice_verified":    true
-  },
-  "report_hash":   "sha256:abc123...",
-  "signature":     "base64-rsa-signature...",
-  "public_key":    "-----BEGIN PUBLIC KEY-----..."
-}
-```
-
-**Verify integrity:**
-```bash
-GET /report/{session_id}/verify
-→ { "valid": true, "verified_at": "2025-05-23T02:21:00Z" }
-```
-
----
-
-## 🌍 System Requirements
-
-### Minimum (Local Dev)
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| CPU | 4 cores | 8+ cores |
-| RAM | 8 GB | 16 GB |
-| Storage | 5 GB | 10 GB |
-| GPU | Not required | CUDA GPU (speeds up wav2vec2 + DeepFace) |
-| OS | macOS 12 / Ubuntu 20.04 / Windows WSL2 | macOS 14 / Ubuntu 22.04 |
-| Python | 3.11+ | 3.12 |
-| Node.js | 18+ | 20 LTS |
-
-### First-Run Downloads (automatic)
-| Model | Size | Purpose |
-|-------|------|---------|
-| `Qwen2.5:7b` (Ollama) | ~4.7 GB | LLM interviewer |
-| `ArcFace` (DeepFace) | ~200 MB | Face recognition |
-| `wav2vec2-base` (HF) | ~360 MB | Voice embeddings |
-| `YOLOv8n` (Ultralytics) | ~6 MB | Multi-person detection |
-| `python:3.11-slim` (Docker) | ~150 MB | Code sandbox |
-
-> **Total first-run:** ~5.5 GB. Subsequent starts use cached models.
-
----
-
-## 🔄 WebSocket Event Reference
-
-The platform uses WebSocket for real-time security event streaming between backend and browser.
-
-### Events pushed to Candidate (`/ws/candidate/{session_id}`)
-
-| Event | Trigger | Frontend Action |
-|-------|---------|----------------|
-| `STEP_UP_TOTP_REQUIRED` | Face mismatch detected | Show TOTP modal overlay |
-| `SESSION_TERMINATED` | Security violation threshold | Show termination screen |
-| `MULTIPLE_PERSONS_ALERT` | YOLO detects extra person | Red border + alert log |
-| `MULTIPLE_SPEAKERS_ALERT` | PyAnnote diarization fires | Red border + alert log |
-| `TAB_SWITCH_WARNING` | `visibilitychange` event | Yellow border + warning log |
-| `RECHECK_PASSED` | Step-up TOTP verified | Green border + success log |
-| `INTERVIEW_COMPLETED` | All questions answered | Redirect to report |
-
-### Events pushed to Recruiter (`/ws/recruiter/{session_id}`)
-Mirror of all candidate events — allows real-time proctoring from a separate monitor tab.
-
-### WebSocket Message Format
-```json
-{
-  "event": "MULTIPLE_PERSONS_ALERT",
-  "data": {
-    "person_count": 2,
-    "confidence": 0.94,
-    "timestamp": "2025-05-23T02:10:33Z"
-  }
-}
-```
-
----
-
-## 📦 Dependencies Breakdown
-
-### Core Python Packages
-```
-fastapi==0.115.*          # async web framework
-uvicorn[standard]         # ASGI server with WebSocket support
-sqlalchemy                # ORM (sync, not async — intentional for thread safety)
-pydantic                  # request/response validation
-python-jose[cryptography] # RS256 JWT
-pyotp                     # TOTP RFC 6238
-qrcode[pil]               # QR code generation for TOTP setup
-deepface                  # ArcFace face recognition
-opencv-python             # image processing + liveness
-dlib                      # facial landmark detection (blink)
-transformers              # wav2vec2 voice embedding
-librosa                   # audio decode (WebM/OGG/WAV)
-scipy                     # WAV fallback decode
-ultralytics               # YOLOv8 multi-person detection
-pyannote.audio            # speaker diarization
-pymupdf                   # PDF resume parsing
-cryptography              # RSA-2048 key generation + signing
-bandit                    # Python static security analysis
-httpx                     # async HTTP client (Deepgram token API)
-python-multipart          # multipart/form-data support
-```
-
-### Frontend npm Packages
-```
-react@18                  # UI framework
-react-dom@18              # DOM renderer
-react-router-dom@6        # client-side routing
-axios                     # HTTP client with interceptors
-recharts                  # score + emotion charts
-@monaco-editor/react      # Monaco (VS Code) code editor
-@deepgram/sdk             # Deepgram streaming STT
-vite@5                    # build tool + dev server
-```
-
----
-
-## 🤝 Contributing
-
-This is a private portfolio project, but if you'd like to discuss architecture, suggest improvements, or report issues:
-
-1. **Open a GitHub Issue** with a clear description of the bug or feature request
-2. **Fork** the repo and create a feature branch: `git checkout -b feat/your-feature`
-3. **Follow the code style** — Python: `black` + `isort`, JavaScript: ESLint (Vite defaults)
-4. **Write descriptive commits** following [Conventional Commits](https://www.conventionalcommits.org/)
-5. **Open a Pull Request** with a clear description of what was changed and why
-6. **Reference the issue** in your PR description (e.g. `Closes #42`)
-
-### Code Style
-```bash
-# Python formatting
-pip install black isort
-black backend/
-isort backend/
-
-# Frontend linting
-cd frontend
-npm run lint
-```
-
-> **Note:** All PRs are reviewed for security implications before merging, given the biometric and cryptographic nature of the codebase.
-
----
-
-## 📄 License
-
-Private — All Rights Reserved © 2026 Md. Athar Ali
-
-This project is built as a portfolio demonstration. All biometric data processed locally — never sent to any external server (except Deepgram for audio transcription and Ollama for LLM inference, both of which are opt-in).
-
----
-
-## 📬 Contact
+## 👨‍💻 Author
 
 **Md. Athar Ali**  
-Full-Stack Developer | AI Systems Builder | Security Enthusiast
+Full-Stack Developer · AI/ML Enthusiast
 
-- 🐙 GitHub: [@Athar786-Ali](https://github.com/Athar786-Ali)
-- 💼 Open to collaboration on AI, security, and full-stack projects
-- 📧 Reach out via GitHub Issues for bug reports or feature discussions
+- 🔗 GitHub: [@Athar786-Ali](https://github.com/Athar786-Ali)
+- 📧 Contact via GitHub Issues
+
+---
+
+## 📜 License
+
+This project is for educational and portfolio purposes.
 
 ---
 
 <div align="center">
-  <sub>Built end-to-end with ❤️ by <strong>Md. Athar Ali</strong></sub><br/>
-  <sub>FastAPI · React · Ollama · DeepFace · wav2vec2 · Deepgram · RSA-2048 · Docker · Monaco Editor</sub>
+<b>Built with ❤️ — FastAPI · React · Ollama · Deepgram · DeepFace · YOLOv8 · RSA-2048</b>
 </div>
