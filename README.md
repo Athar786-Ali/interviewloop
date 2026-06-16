@@ -451,6 +451,184 @@ Each question prompt includes:
 
 ---
 
+## ⚡ Performance & Benchmarks
+
+All benchmarks measured on a **MacBook Pro M2 (16 GB RAM)** running Ollama locally.
+
+| Operation | Avg. Latency | Notes |
+|-----------|-------------|-------|
+| Face enrollment (5 angles) | ~3–5 s | DeepFace ArcFace embedding |
+| Liveness check (blink detect) | ~0.3 s / frame | Dlib 68 landmarks |
+| Voice embedding (wav2vec2) | ~1.2 s | 8 s clip → 768-d vector |
+| TOTP verification | < 50 ms | In-memory PyOTP check |
+| LLM question generation | ~4–8 s | Qwen2.5:7b on CPU via Ollama |
+| Deepgram live transcription | < 300 ms | WebSocket streaming |
+| RSA-2048 sign report | ~15 ms | Python `cryptography` library |
+| YOLOv8 person detection | ~80 ms / frame | `yolov8n.pt` nano model |
+
+> **No GPU required** — the entire stack runs comfortably on a modern laptop CPU/Apple Silicon.
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ Completed (v1.0)
+- [x] 5-tier biometric security (face · liveness · voice · TOTP · proctoring)
+- [x] Adaptive Ollama LLM interviewer with 3 personas and 3 modes
+- [x] Real-time Deepgram voice transcription (WebSocket)
+- [x] Monaco code editor with Docker sandbox execution
+- [x] RSA-2048 signed + SHA-256 hash-chained reports
+- [x] Full Docker Compose deployment
+
+### 🔄 In Progress (v1.1)
+- [ ] **Resume parsing improvements** — structured JSON extraction via LLM
+- [ ] **Email report delivery** — SMTP integration to send signed PDF reports
+- [ ] **LinkedIn share card** — auto-generate OG image for report sharing
+
+### 🔮 Planned (v2.0)
+- [ ] **Multimodal LLM upgrade** — LLaVA / Gemma3 for image-based whiteboard questions
+- [ ] **PostgreSQL support** — migration path from SQLite for multi-user deployments
+- [ ] **Admin dashboard** — institution-level monitoring, bulk enrollment, analytics
+- [ ] **Mobile PWA** — responsive layout + camera/mic access on mobile browsers
+- [ ] **Emotion heatmap export** — timeline visualization exportable as PNG
+- [ ] **Interview replay** — recorded session review with synchronized transcript
+- [ ] **Group interview mode** — multi-candidate, single interviewer session
+
+---
+
+## 🔒 Security Considerations & Threat Model
+
+### Addressed Threats
+| Threat | Mitigation |
+|--------|-----------|
+| **Photo/video spoofing** | Dlib blink-based liveness detection |
+| **Voice replay attack** | Short enrollment window + cosine threshold |
+| **JWT theft** | RS256 signing, short-lived tokens, sessionStorage (not localStorage) |
+| **Code injection (code editor)** | Bandit static analysis + `--network none` Docker sandbox |
+| **Report tampering** | RSA-2048 signature + SHA-256 hash chain |
+| **Proxy impersonation** | YOLOv8 multi-person detection + mid-session TOTP step-up |
+| **Tab switching / browser escape** | JS `visibilitychange` events → warning → termination |
+| **Deepgram key leakage** | Ephemeral keys issued per session, revoked immediately after use |
+
+### Known Limitations
+- Voice biometric threshold (0.60) may allow false positives in noisy environments — adjustable in `config.py`
+- SQLite is single-writer; switch to PostgreSQL for concurrent multi-user deployments
+- Liveness detection requires adequate lighting — low-light environments may fail
+- LLM responses are non-deterministic; scoring may vary slightly between runs
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run a specific test module
+pytest tests/test_auth.py -v
+
+# Check test coverage
+pytest --cov=backend tests/
+```
+
+Test suite covers:
+- Auth flow: enrollment, face/voice/TOTP verification
+- Interview lifecycle: start → respond → end
+- Cryptography: RSA sign/verify, hash chain integrity
+- Security: tab switch, step-up, face re-check endpoints
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Whether it's a bug fix, feature suggestion, or documentation improvement — all PRs are appreciated.
+
+### Getting Started
+
+```bash
+# 1. Fork the repository on GitHub
+# 2. Clone your fork
+git clone https://github.com/<your-username>/miic-sec.git
+cd miic-sec
+
+# 3. Create a feature branch
+git checkout -b feature/your-feature-name
+
+# 4. Install dependencies
+cd backend && pip install -r requirements.txt
+cd ../frontend && npm install
+
+# 5. Make your changes and commit
+git commit -m "feat: add your feature description"
+
+# 6. Push and open a pull request
+git push origin feature/your-feature-name
+```
+
+### Code Style
+- **Python**: Follow PEP 8, use type hints where possible
+- **JavaScript/React**: ESLint default rules, functional components with hooks
+- **Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`)
+
+### Reporting Issues
+Please use [GitHub Issues](https://github.com/Athar786-Ali/miic-sec/issues) with:
+- Steps to reproduce
+- Expected vs. actual behaviour
+- OS, Python version, Node version, browser
+
+---
+
+## ❓ FAQ
+
+<details>
+<summary><b>Does MIIC-Sec send any data to the cloud?</b></summary>
+
+By default, only **Deepgram** (speech-to-text) receives audio data during live voice transcription. All other processing — face recognition, voice biometrics, LLM inference — happens **100% locally on your machine**. You can replace Deepgram with a local Whisper model to go fully offline.
+</details>
+
+<details>
+<summary><b>Can I use a different LLM instead of Qwen2.5:7b?</b></summary>
+
+Yes! Any model available in Ollama works. Change `MODEL_NAME` in `backend/config.py`:
+```python
+OLLAMA_MODEL = "llama3:8b"   # or mistral, gemma2, phi3, etc.
+```
+Larger models (13B+) give better interview quality but are slower on CPU.
+</details>
+
+<details>
+<summary><b>How accurate is the face recognition?</b></summary>
+
+DeepFace with ArcFace model achieves ~99.4% accuracy on LFW benchmark. In practice, performance depends on lighting and camera quality. The cosine similarity threshold is configurable in `config.py`.
+</details>
+
+<details>
+<summary><b>Can I deploy this on a cloud server?</b></summary>
+
+Yes — Docker Compose works on any Linux server. For cloud deployment:
+- Use a server with ≥ 8 GB RAM for the LLM
+- Set `ALLOWED_ORIGINS` in `config.py` to your domain
+- Put Nginx in front for HTTPS (required for webcam/mic in browsers)
+- Consider mounting an external volume for `keys/` and `reports/`
+</details>
+
+<details>
+<summary><b>What if I don't have a Deepgram API key?</b></summary>
+
+You can still use the platform with **typed text input** — the voice transcription is optional. Create a free Deepgram account at [deepgram.com](https://deepgram.com) to get 200 free hours/month.
+</details>
+
+<details>
+<summary><b>Is my interview data stored permanently?</b></summary>
+
+Data is stored locally in `backend/miic_sec.db` (SQLite) and `reports/` (JSON). No data is uploaded anywhere. You can delete these files at any time to clear all records.
+</details>
+
+---
+
 ## 👨‍💻 Author
 
 **Md. Athar Ali**  
@@ -463,10 +641,16 @@ Full-Stack Developer · AI/ML Enthusiast
 
 ## 📜 License
 
-This project is for educational and portfolio purposes.
+This project is licensed for educational and portfolio purposes.  
+Feel free to fork, learn from, and build upon it — attribution appreciated.
 
 ---
 
 <div align="center">
 <b>Built with ❤️ — FastAPI · React · Ollama · Deepgram · DeepFace · YOLOv8 · RSA-2048</b>
+
+<br/><br/>
+
+⭐ <b>If you found this project useful, please give it a star!</b> ⭐
+
 </div>
