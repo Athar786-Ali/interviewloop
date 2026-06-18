@@ -6,6 +6,14 @@
 ### AI-Powered Secure Mock Interview & Career Accelerator Platform
 
 <p>
+  <img src="https://img.shields.io/github/stars/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Stars&color=FFD700" />
+  <img src="https://img.shields.io/github/forks/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Forks&color=6366f1" />
+  <img src="https://img.shields.io/github/issues/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Issues&color=orange" />
+  <img src="https://img.shields.io/github/issues-pr/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=PRs&color=brightgreen" />
+  <img src="https://img.shields.io/github/last-commit/Athar786-Ali/miic-sec?style=flat-square&logo=git&label=Last%20Commit&color=blue" />
+</p>
+
+<p>
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" />
@@ -29,7 +37,10 @@
   <a href="#-architecture">Architecture</a> •
   <a href="#-security-model">Security</a> •
   <a href="#-quick-start">Quick Start</a> •
+  <a href="#-system-requirements">Requirements</a> •
   <a href="#-api-reference">API Reference</a> •
+  <a href="#-changelog">Changelog</a> •
+  <a href="#-privacy--data-policy">Privacy</a> •
   <a href="#-author">Author</a>
 </p>
 
@@ -300,6 +311,27 @@ miic-sec/
 
 ---
 
+## 💻 System Requirements
+
+### Minimum (runs everything on CPU)
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **RAM** | 8 GB | 16 GB |
+| **CPU** | 4-core (x86-64 or Apple Silicon) | 8-core M2 / Ryzen 7 |
+| **Storage** | 10 GB free | 20 GB free |
+| **OS** | macOS 13+, Ubuntu 22.04+, Windows 11 (WSL2) | macOS 14 / Ubuntu 24.04 |
+| **Python** | 3.11 | 3.11 or 3.12 |
+| **Node.js** | 18.x | 20.x LTS |
+| **Webcam** | Any 720p USB/built-in | 1080p with good low-light |
+| **Microphone** | Any built-in mic | Headset / dedicated mic |
+
+### GPU (Optional)
+The entire stack runs **without a GPU**. If you have an NVIDIA GPU with CUDA, DeepFace and YOLOv8 will automatically use it for faster inference — no code changes required.
+
+> ⚡ **Apple Silicon (M1/M2/M3)**: Fully supported. Ollama uses Metal acceleration automatically.
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -470,6 +502,26 @@ All benchmarks measured on a **MacBook Pro M2 (16 GB RAM)** running Ollama local
 
 ---
 
+## 📋 Changelog
+
+### v1.1.0 — Current
+- ✅ Replaced Whisper with **Deepgram nova-2** for real-time WebSocket STT (300 ms latency)
+- ✅ Ephemeral Deepgram key management — keys issued per session and immediately revoked
+- ✅ Non-blocking biometric pipeline — parallel face + voice enrollment with animated progress UI
+- ✅ Improved Docker Compose setup with Ollama service and health checks
+- ✅ Added SHA-256 hash-chain audit log for tamper-evident event history
+- ✅ Full Swagger / ReDoc auto-documentation at `/docs` and `/redoc`
+
+### v1.0.0 — Initial Release
+- ✅ 5-tier biometric authentication (Face → Liveness → Voice → TOTP → Proctoring)
+- ✅ Adaptive Ollama LLM interviewer with 3 modes (Topic / Resume / Combined) and 3 personas
+- ✅ Monaco code editor with isolated Docker sandbox execution
+- ✅ RSA-2048 signed interview reports with public verification endpoint
+- ✅ Full-stack React + FastAPI + SQLite implementation
+- ✅ Docker Compose single-command deployment
+
+---
+
 ## 🗺️ Roadmap
 
 ### ✅ Completed (v1.0)
@@ -629,13 +681,62 @@ Data is stored locally in `backend/miic_sec.db` (SQLite) and `reports/` (JSON). 
 
 ---
 
+## 🔏 Privacy & Data Policy
+
+MIIC-Sec is designed with a **privacy-first** philosophy. Here is a clear breakdown of what goes where:
+
+| Data | Stored | Location | Sent to Cloud? |
+|------|--------|----------|----------------|
+| Face biometric embedding | ✅ Yes | Local SQLite DB | ❌ Never |
+| Voice biometric embedding | ✅ Yes | Local SQLite DB | ❌ Never |
+| TOTP secret | ✅ Yes | Local SQLite DB | ❌ Never |
+| Interview Q&A text | ✅ Yes | Local SQLite DB | ❌ Never |
+| LLM prompts & responses | ❌ Not persisted | Ollama (local process) | ❌ Never |
+| Audio during voice STT | 🔄 Streamed | Deepgram API (cloud) | ✅ Yes — audio only |
+| Interview report JSON | ✅ Yes | Local `reports/` folder | ❌ Never |
+| RSA private key | ✅ Yes | Local `keys/` folder | ❌ Never |
+
+> **Note on Deepgram**: Audio is streamed to Deepgram's API solely for speech-to-text transcription. No audio is stored by the platform. You can eliminate this cloud dependency by replacing Deepgram with a local [Whisper](https://github.com/openai/whisper) model — see the FAQ for details.
+
+### GDPR / Institutional Compliance
+- All PII (face, voice, email) is stored **only on your own infrastructure**
+- No analytics, telemetry, or tracking of any kind
+- Data can be fully deleted by removing `backend/miic_sec.db` and `reports/`
+- No third-party cookies, no CDN-hosted assets in the core application
+
+---
+
+## 📚 Academic Citation
+
+If you use MIIC-Sec as a reference for research, coursework, or a technical report, please cite it as:
+
+```bibtex
+@software{miicsec2025,
+  author    = {Ali, Md. Athar},
+  title     = {MIIC-Sec: AI-Powered Secure Mock Interview \& Career Accelerator Platform},
+  year      = {2025},
+  url       = {https://github.com/Athar786-Ali/miic-sec},
+  note      = {Self-hosted mock interview system with 5-tier biometric security,
+               adaptive LLM questioning, real-time transcription, and
+               cryptographically signed interview reports}
+}
+```
+
+Or in plain text:
+> Md. Athar Ali. *MIIC-Sec: AI-Powered Secure Mock Interview & Career Accelerator Platform*. 2025. https://github.com/Athar786-Ali/miic-sec
+
+---
+
 ## 👨‍💻 Author
 
 **Md. Athar Ali**  
-Full-Stack Developer · AI/ML Enthusiast
+Full-Stack Developer · AI/ML Enthusiast · Security Researcher
 
 - 🔗 GitHub: [@Athar786-Ali](https://github.com/Athar786-Ali)
-- 📧 Contact via GitHub Issues
+- 🐛 Bug Reports: [GitHub Issues](https://github.com/Athar786-Ali/miic-sec/issues)
+- 💼 Open to collaborations, research partnerships, and internship opportunities
+
+> *"Building security-first AI systems that respect user privacy."*
 
 ---
 
