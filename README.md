@@ -383,13 +383,29 @@ docker exec -it miic_ollama ollama pull qwen2.5:7b
 
 ### Environment Variables (`backend/.env`)
 
+Copy `.env.example` to `backend/.env` and fill in the values:
+
 ```env
-DEEPGRAM_API_KEY=your_deepgram_key    # Real-time STT
-HF_TOKEN=hf_your_token               # Optional: PyAnnote diarization
-OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES  # macOS only
+# ── Speech-to-Text ──────────────────────────────────────────────
+DEEPGRAM_API_KEY=your_deepgram_key       # Required for live voice transcription
+                                          # Free tier: 200 hrs/month at deepgram.com
+
+# ── AI / Diarization ────────────────────────────────────────────
+HF_TOKEN=hf_your_token                   # Optional — needed only for PyAnnote
+                                          # multi-speaker diarization
+                                          # Get one free at huggingface.co/settings/tokens
+
+# ── Platform ────────────────────────────────────────────────────
+OLLAMA_BASE_URL=http://localhost:11434   # Ollama server URL (change for Docker)
+SECRET_KEY=change_me_in_production       # Used for additional HMAC operations
+ALLOWED_ORIGINS=http://localhost:3000    # CORS — add your domain for cloud deploy
+
+# ── macOS only ──────────────────────────────────────────────────
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES  # Prevents multiprocessing crashes on macOS
 ```
 
-> 💡 RSA keypair is auto-generated in `keys/` on first startup — no manual setup needed.
+> 💡 RSA keypair is **auto-generated** in `keys/` on first startup — no manual setup needed.
+> 💡 All sensitive keys are read at startup; restart the backend after editing `.env`.
 
 ---
 
@@ -504,7 +520,14 @@ All benchmarks measured on a **MacBook Pro M2 (16 GB RAM)** running Ollama local
 
 ## 📋 Changelog
 
-### v1.1.0 — Current
+### v1.2.0 — Latest
+- ✅ **Expanded test suite** — 6 dedicated phase files covering every subsystem
+- ✅ **Full environment variable documentation** — all config keys explained with defaults
+- ✅ **Nginx HTTPS deployment guide** added to README
+- ✅ **Competitor comparison table** — MIIC-Sec vs. HireVue, Interviewing.io, LeetCode
+- ✅ README enriched with detailed troubleshooting, FAQ, and deployment tips
+
+### v1.1.0
 - ✅ Replaced Whisper with **Deepgram nova-2** for real-time WebSocket STT (300 ms latency)
 - ✅ Ephemeral Deepgram key management — keys issued per session and immediately revoked
 - ✅ Non-blocking biometric pipeline — parallel face + voice enrollment with animated progress UI
@@ -548,6 +571,70 @@ All benchmarks measured on a **MacBook Pro M2 (16 GB RAM)** running Ollama local
 
 ---
 
+## 🌐 Production Deployment (Nginx + HTTPS)
+
+For cloud or institutional deployment, put **Nginx** in front to handle SSL termination and proxy to FastAPI + Vite.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name your.domain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/your.domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your.domain.com/privkey.pem;
+
+    # Frontend (Vite production build)
+    location / {
+        root /var/www/miic-sec/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API
+    location ~ ^/(auth|interview|security|report|user|ws)/ {
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection "upgrade";  # WebSocket support
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+}
+
+# Redirect HTTP → HTTPS
+server {
+    listen 80;
+    server_name your.domain.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+> 🔑 **HTTPS is mandatory** — browsers block webcam and microphone access on plain HTTP.
+> Use [Certbot](https://certbot.eff.org/) for a free Let's Encrypt certificate.
+
+Build the frontend for production before deploying:
+```bash
+cd frontend && npm run build   # outputs to frontend/dist/
+```
+
+---
+
+## ⚖️ How MIIC-Sec Compares
+
+| Feature | **MIIC-Sec** | HireVue | Interviewing.io | LeetCode Mock |
+|---------|:---:|:---:|:---:|:---:|
+| **Self-hosted / Privacy-first** | ✅ Yes | ❌ Cloud only | ❌ Cloud only | ❌ Cloud only |
+| **Biometric anti-cheat** | ✅ 5-tier | ✅ AI proctoring | ❌ No | ❌ No |
+| **Adaptive AI Interviewer** | ✅ Local LLM | ✅ Proprietary | ✅ Human peers | ❌ No |
+| **Live code editor + sandbox** | ✅ Monaco + Docker | ❌ No | ✅ Yes | ✅ Yes |
+| **Cryptographically signed reports** | ✅ RSA-2048 | ❌ No | ❌ No | ❌ No |
+| **Resume-based questions** | ✅ PDF → LLM | ✅ Yes | ❌ No | ❌ No |
+| **Free / open source** | ✅ Free | 💰 Paid | 🔄 Freemium | 🔄 Freemium |
+| **Zero data to third parties** | ✅ (except STT) | ❌ All data | ❌ All data | ❌ All data |
+
+> MIIC-Sec is the **only open-source** platform combining enterprise-grade biometric proctoring with a fully local AI interviewer.
+
+---
+
 ## 🔒 Security Considerations & Threat Model
 
 ### Addressed Threats
@@ -579,18 +666,25 @@ pytest
 # Run with verbose output
 pytest -v
 
-# Run a specific test module
-pytest tests/test_auth.py -v
+# Run a specific test file
+pytest tests/test_phase1.py -v
 
 # Check test coverage
 pytest --cov=backend tests/
 ```
 
-Test suite covers:
-- Auth flow: enrollment, face/voice/TOTP verification
-- Interview lifecycle: start → respond → end
-- Cryptography: RSA sign/verify, hash chain integrity
-- Security: tab switch, step-up, face re-check endpoints
+The test suite is organised into **6 phases** that mirror the build progression of the platform:
+
+| Phase | File | What It Tests |
+|-------|------|---------------|
+| **Phase 1** | `test_phase1.py` | Database models, schema creation, Candidate/Session CRUD |
+| **Phase 2** | `test_phase2.py` | Auth endpoints — enrollment (face + voice + TOTP), login flow, JWT issuance |
+| **Phase 3** | `test_phase3.py` | Interview lifecycle — `/start`, `/respond` (adaptive scoring), `/end`, resume upload |
+| **Phase 4** | `test_phase4.py` | Cryptography — RSA-2048 sign/verify, SHA-256 hash-chain audit log integrity |
+| **Phase 5** | `test_phase5.py` | Security endpoints — tab-switch logging, face re-check, TOTP step-up challenge |
+| **Phase 6** | `test_phase6.py` | WebSocket event stream, real-time security event delivery |
+
+> Run phases individually during development to isolate failures quickly.
 
 ---
 
