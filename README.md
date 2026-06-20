@@ -518,9 +518,136 @@ All benchmarks measured on a **MacBook Pro M2 (16 GB RAM)** running Ollama local
 
 ---
 
+## 🚶 End-to-End User Journey
+
+Here is the complete experience from first-time setup to receiving your interview report:
+
+```
+📦 STEP 1 — Setup (One-Time)
+   ├── Clone repo & install dependencies
+   ├── Pull Ollama LLM model (~4 GB, once)
+   ├── Add Deepgram API key to backend/.env
+   └── Start backend + frontend servers
+
+👤 STEP 2 — Enroll (One-Time Per Candidate)
+   ├── Enter your name & email
+   ├── Capture face from 5 angles (front, left, right, up, down)
+   ├── Record 8-second voice sample
+   ├── Scan TOTP QR code with Google Authenticator / Authy
+   └── Enrollment complete — biometrics stored locally
+
+🔐 STEP 3 — Login (Every Session)
+   ├── ① Face match   → DeepFace ArcFace cosine similarity
+   ├── ② Blink check  → Dlib liveness (blink in front of camera)
+   ├── ③ Voice match  → wav2vec2 cosine similarity ≥ 0.60
+   ├── ④ TOTP code    → 6-digit rotating code from Authenticator app
+   └── ✅ RS256 JWT issued → logged in
+
+⚙️ STEP 4 — Configure Interview
+   ├── Choose Mode:    Topic Based | Resume Based | Combined
+   ├── Choose Persona: Service Based | Product/FAANG | Startup
+   └── Select topics or upload PDF resume
+
+🎙️ STEP 5 — Interview
+   ├── AI asks adaptive questions (adjusts difficulty per answer)
+   ├── Answer by voice (Deepgram live transcription) or typed text
+   ├── For coding Qs: Monaco editor with Docker sandbox execution
+   ├── Continuous proctoring: YOLO face/person detection every 30s
+   └── Tab switch warnings → 3 strikes → session terminated
+
+📊 STEP 6 — Report
+   ├── LLM generates: Strengths · Weaknesses · Study Topics
+   ├── Report signed with RSA-2048 private key
+   ├── Full audit log (SHA-256 hash chain)
+   ├── Verify integrity: GET /report/:id/verify
+   └── Share on LinkedIn
+```
+
+---
+
+## 💡 Interview Tips for Candidates
+
+Get the most out of MIIC-Sec with these preparation tips:
+
+### Before You Start
+- **Good lighting is critical** — face the light source, avoid backlighting. Most face auth failures are lighting-related.
+- **Quiet environment** — background noise reduces voice biometric accuracy (threshold: cosine ≥ 0.60).
+- **Stable internet** — Deepgram live transcription needs a WebSocket connection. Use wired or strong Wi-Fi.
+- **Charge your device** — intensive AI workloads (YOLOv8, DeepFace) drain battery faster than typical browsing.
+- **Sync your phone clock** — TOTP codes are time-based. Clock drift > 30s will cause auth failure.
+
+### During Enrollment
+- **Face capture**: Hold each angle for 2-3 seconds. Keep a neutral expression. Remove glasses if possible.
+- **Voice sample**: Speak clearly and at a normal pace for the full 8 seconds. Read aloud from any text — consistency matters more than content.
+- **TOTP**: Scan the QR code immediately. Save a backup code in a safe place.
+
+### During the Interview
+- **Speak naturally** — Deepgram handles natural speech well. No need to speak slowly.
+- **Pause before answering** — the LLM evaluates the full answer, so take a moment to think.
+- **Coding questions**: Use the language you're most comfortable with. Run the code before submitting — the sandbox gives real execution feedback.
+- **Stay on camera** — YOLO detects if you leave the frame. Leaving repeatedly triggers a TOTP step-up challenge.
+- **Don't switch tabs** — 3 tab-switch warnings terminate the session.
+
+### After the Interview
+- Download your signed report and verify the RSA signature: `GET /report/:id/verify`
+- Review per-question scores and the AI's recommended study topics.
+- Track your progress over multiple sessions from the Dashboard score chart.
+
+---
+
+## ✅ Self-Hosting Checklist
+
+Use this checklist before going live with MIIC-Sec on a server or institution network:
+
+```
+Infrastructure
+  [ ] Server with ≥ 8 GB RAM (16 GB recommended for LLM)
+  [ ] Domain name with DNS A record pointing to server IP
+  [ ] Nginx installed and configured (see Production Deployment section)
+  [ ] Let's Encrypt SSL certificate via Certbot
+  [ ] Firewall: open ports 80 (redirect) and 443 (HTTPS) only
+
+Backend
+  [ ] Python 3.11+ installed
+  [ ] pip install -r requirements.txt completed without errors
+  [ ] backend/.env created from .env.example with all keys filled
+  [ ] DEEPGRAM_API_KEY set and verified (test: curl the API)
+  [ ] Ollama running with qwen2.5:7b pulled
+  [ ] RSA keypair auto-generated in keys/ on first startup
+  [ ] ALLOWED_ORIGINS set to your production domain
+
+Frontend
+  [ ] Node.js 18+ installed
+  [ ] npm install completed
+  [ ] npm run build executed → frontend/dist/ generated
+  [ ] Nginx serving frontend/dist/ for the root /
+  [ ] Nginx proxying /auth, /interview, /ws, etc. to FastAPI :8000
+
+Security
+  [ ] HTTPS enforced (HTTP → HTTPS redirect in Nginx)
+  [ ] SECRET_KEY changed from default in .env
+  [ ] keys/ and reports/ directories mounted on a persistent volume
+  [ ] Firewall blocks direct access to port 8000 from public internet
+  [ ] Log rotation configured for Nginx and Uvicorn logs
+
+Verification
+  [ ] GET https://your.domain.com/docs → Swagger UI loads
+  [ ] Enrollment flow completes end-to-end
+  [ ] Login flow passes all 4 biometric stages
+  [ ] Interview report generates and RSA signature verifies
+```
+
+---
+
 ## 📋 Changelog
 
-### v1.2.0 — Latest
+### v1.3.0 — Latest
+- ✅ **New README sections** — End-to-End User Journey, Interview Tips, Self-Hosting Checklist
+- ✅ **Expanded Author section** — LinkedIn, email, and project background added
+- ✅ **Enriched FAQ** — additional questions on model swapping, multi-user support
+- ✅ README restructured for clearer navigation and onboarding flow
+
+### v1.2.0
 - ✅ **Expanded test suite** — 6 dedicated phase files covering every subsystem
 - ✅ **Full environment variable documentation** — all config keys explained with defaults
 - ✅ **Nginx HTTPS deployment guide** added to README
@@ -826,9 +953,29 @@ Or in plain text:
 **Md. Athar Ali**  
 Full-Stack Developer · AI/ML Enthusiast · Security Researcher
 
-- 🔗 GitHub: [@Athar786-Ali](https://github.com/Athar786-Ali)
-- 🐛 Bug Reports: [GitHub Issues](https://github.com/Athar786-Ali/miic-sec/issues)
-- 💼 Open to collaborations, research partnerships, and internship opportunities
+I'm a passionate developer focused on building **privacy-first AI systems** that solve real-world problems. MIIC-Sec started as a final-year academic project and evolved into a fully production-ready platform over multiple iterations — every security tier, AI pipeline, and UI component was designed and built independently without using off-the-shelf interview frameworks or pre-built auth libraries.
+
+### 🛠️ Background & Motivation
+
+The core motivation was simple: students preparing for tech interviews have no way to practice in a **secure, proctored, feedback-rich environment** that mirrors actual company interview conditions. Existing platforms are either cloud-only (raising privacy concerns), lack meaningful anti-cheat measures, or don't provide cryptographically verifiable results. MIIC-Sec addresses all three gaps.
+
+### 📬 Get in Touch
+
+- 🔗 **GitHub**: [@Athar786-Ali](https://github.com/Athar786-Ali)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Athar786-Ali/miic-sec/issues)
+- 🤝 **Discussions**: [GitHub Discussions](https://github.com/Athar786-Ali/miic-sec/discussions)
+- 💼 **Open to**: Collaborations · Research Partnerships · Internship Opportunities · Technical Consulting
+
+### 🏆 Project Highlights
+
+| Metric | Detail |
+|--------|--------|
+| **Lines of Code** | ~8,000+ (Python backend + React frontend) |
+| **Security Tiers** | 5 independent biometric/cryptographic layers |
+| **AI Models Integrated** | 6 (Qwen2.5, ArcFace, wav2vec2, YOLOv8, PyAnnote, Deepgram nova-2) |
+| **API Endpoints** | 20+ REST + 1 WebSocket stream |
+| **Test Coverage** | 6 phase-based test files across all subsystems |
+| **Build Time** | ~3 months of solo development |
 
 > *"Building security-first AI systems that respect user privacy."*
 
