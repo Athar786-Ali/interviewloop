@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 
 // ── Interview mode options ─────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ const COMPANY_TARGETS = [
 ]
 
 export default function InterviewSetup({ onStart }) {
+  const navigate = useNavigate()
   const [mode,          setMode]          = useState('topic')
   const [companyTarget, setCompanyTarget] = useState('product')
   const [pressureMode,  setPressureMode]  = useState('practice')  // Phase 3
@@ -108,13 +110,25 @@ export default function InterviewSetup({ onStart }) {
   const needsResume = mode === 'resume' || mode === 'combined'
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px 64px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Nav bar */}
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Setup</span>
+        </div>
+        <button onClick={() => navigate('/dashboard')} className="btn btn-ghost" style={{ fontSize: '0.85rem', padding: '7px 14px' }}>← Dashboard</button>
+      </nav>
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px 64px' }}>
       <div style={{ width: '100%', maxWidth: 640 }}>
 
         {/* Header */}
-        <div className="page-header" style={{ justifyContent: 'center', marginBottom: 24 }}>
-          <div className="logo-mark">🛡</div>
-          <h1>Interview Setup</h1>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 6 }}>Interview Setup</h1>
+          <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>Customize your session and start practising</p>
         </div>
 
         {/* Phase 3 — Pressure Mode Selector */}
@@ -377,6 +391,7 @@ export default function InterviewSetup({ onStart }) {
             ? <><span className="spinner" style={{ marginRight: 8 }} />Starting interview…</>
             : '▶ Start Interview'}
         </button>
+      </div>
       </div>
     </div>
   )

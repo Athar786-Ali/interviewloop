@@ -39,12 +39,10 @@ function Toast({ msg, type = 'danger', onClose }) {
 }
 
 // ─── Input field ───────────────────────────────────────────────────────────
-function Field({ label, id, type = 'text', value, onChange, placeholder, autoFocus }) {
+function Field({ label, id, type = 'text', value, onChange, placeholder, autoFocus, error }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label htmlFor={id} style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6, color: 'var(--clr-text-muted)' }}>
-        {label}
-      </label>
+    <div style={{ marginBottom: error ? 8 : 16 }}>
+      <label htmlFor={id} className="label">{label}</label>
       <input
         id={id}
         className="input"
@@ -53,8 +51,9 @@ function Field({ label, id, type = 'text', value, onChange, placeholder, autoFoc
         onChange={onChange}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        style={{ width: '100%' }}
+        style={{ width: '100%', borderColor: error ? 'var(--clr-danger)' : undefined }}
       />
+      {error && <div className="field-error">⚠️ {error}</div>}
     </div>
   )
 }
@@ -325,12 +324,10 @@ export default function SignupLogin() {
 
       <div className="card" style={{ width: '100%', maxWidth: 460 }}>
         {/* Header */}
-        <div className="page-header" style={{ marginBottom: 24 }}>
-          <div className="logo-mark">🛡</div>
-          <h1>InterviewLoop</h1>
-          <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.88rem', marginTop: 4 }}>
-            AI-Powered Mock Interview Practice
-          </p>
+        <div style={{ marginBottom: 28, textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--clr-primary), var(--clr-accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>🛡</div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', margin: '0 0 4px' }}>InterviewLoop</h1>
+          <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.85rem', margin: 0 }}>AI-Powered Mock Interview Practice</p>
         </div>
 
         {screen === 'form' && (
@@ -348,6 +345,8 @@ export default function SignupLogin() {
                   style={{
                     padding: '9px 0', borderRadius: 'var(--r-sm)',
                     border: 'none', cursor: 'pointer', fontWeight: 600,
+                    fontSize: '0.9rem', letterSpacing: '-0.01em',
+                    transition: 'all 150ms ease',
                     fontSize: '0.88rem', transition: 'all 0.18s',
                     background: tab === t ? 'var(--clr-primary)' : 'transparent',
                     color:      tab === t ? '#fff' : 'var(--clr-text-muted)',
@@ -398,7 +397,8 @@ export default function SignupLogin() {
                 <PasswordStrength password={signupPassword} />
                 <Field id="scp" label="Confirm Password" type="password"
                   value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)}
-                  placeholder="••••••••" />
+                  placeholder="••••••••"
+                  error={signupConfirm && signupPassword !== signupConfirm ? "Passwords don't match" : ''} />
                 <button
                   type="submit"
                   className="btn btn-primary"
@@ -518,7 +518,8 @@ export default function SignupLogin() {
                 onChange={e => setResetPassword(e.target.value)} placeholder="••••••••" />
               <PasswordStrength password={resetPassword} />
               <Field id="rcp" label="Confirm Password" type="password" value={resetConfirm}
-                onChange={e => setResetConfirm(e.target.value)} placeholder="••••••••" />
+                onChange={e => setResetConfirm(e.target.value)} placeholder="••••••••"
+                error={resetConfirm && resetPassword !== resetConfirm ? "Passwords don't match" : ''} />
               <button type="submit" className="btn btn-success" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
                 {loading ? <><span className="spinner" />Resetting…</> : 'Reset Password'}
               </button>

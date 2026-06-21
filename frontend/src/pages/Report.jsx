@@ -40,7 +40,16 @@ function SecurityEventIcon({ type }) {
 
 // ── Detailed Feedback Section ─────────────────────────────────────
 function FeedbackSection({ feedback, mode, topics, duration, totalQ }) {
-  if (!feedback) return null
+  if (!feedback) return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="empty-state">
+        <div className="empty-state-icon">📋</div>
+        <div className="empty-state-title">No Feedback Available</div>
+        <div className="empty-state-desc">Feedback is generated after completing at least 3 questions in your interview session.</div>
+        <Link to="/interview" className="btn btn-primary" style={{ marginTop: 4 }}>Start a New Interview</Link>
+      </div>
+    </div>
+  )
   const modeLabel = mode === 'topic' ? 'Topic Based' : mode === 'resume' ? 'Resume Based' : mode === 'combined' ? 'Combined' : mode || '—'
 
   const cards = [
@@ -144,7 +153,27 @@ export default function Report() {
     finally { setVerifying(false) }
   }
 
-  if (loading) return <div className="page-center"><span className="spinner" style={{ width: 36, height: 36 }} /></div>
+  if (loading) return (
+    <div style={{ minHeight: '100vh' }}>
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Report</span>
+        </div>
+        <Link to="/dashboard" className="btn btn-ghost" style={{ fontSize: '0.85rem', padding: '7px 14px' }}>← Dashboard</Link>
+      </nav>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+        <div className="skeleton" style={{ width: 300, height: 36, borderRadius: 8, marginBottom: 10 }} />
+        <div className="skeleton skeleton-text medium" style={{ marginBottom: 32 }} />
+        <div className="skeleton-card" style={{ height: 120, marginBottom: 24 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+          {[1,2,3].map(i => <div key={i} className="skeleton-card" style={{ height: 100 }} />)}
+        </div>
+        <div className="skeleton-card" style={{ height: 280 }} />
+      </div>
+    </div>
+  )
   if (error) return (
     <div className="page-center">
       <div className="card" style={{ maxWidth: 420, textAlign: 'center' }}>
@@ -168,63 +197,49 @@ export default function Report() {
   const fb        = report.detailed_feedback || null
 
   return (
-    <div className={styles.page}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className="page-header" style={{ margin: 0 }}>
-          <div className="logo-mark">🛡</div>
-          <h1>Interview Report</h1>
+    <div style={{ minHeight: '100vh', paddingBottom: 64 }}>
+      {/* Nav bar */}
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Report</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost" onClick={verifySignature} disabled={verifying}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className="btn btn-ghost" onClick={verifySignature} disabled={verifying} style={{ fontSize: '0.82rem', padding: '7px 14px' }}>
             {verifying ? <><span className="spinner" /> Verifying…</> : '🔏 Verify Signature'}
           </button>
-          <button className="btn btn-primary" onClick={async () => {
+          <button className="btn btn-ghost" style={{ fontSize: '0.82rem', padding: '7px 14px' }} onClick={async () => {
             try {
               const { data } = await api.get(`/report/${sessionId}/download`, { responseType: 'blob' })
               const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
               const a = document.createElement('a'); a.href = url; a.download = `${sessionId}_report.json`
               document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-            } catch { alert('Download failed. Please try again.') }
-          }}>
-            ⬇ Download JSON
-          </button>
-          <button className="btn btn-ghost" onClick={async () => {
+            } catch { alert('Download failed.') }
+          }}>⬇ JSON</button>
+          <button className="btn btn-ghost" style={{ fontSize: '0.82rem', padding: '7px 14px' }} onClick={async () => {
             try {
               const resp = await api.get(`/report/${sessionId}/pdf`, { responseType: 'blob' })
               const url  = URL.createObjectURL(resp.data)
-              const a    = document.createElement('a'); a.href = url; a.download = `interviewloop_report_${sessionId.slice(0,8)}.pdf`
+              const a    = document.createElement('a'); a.href = url; a.download = `report_${sessionId.slice(0,8)}.pdf`
               document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-            } catch { alert('PDF generation failed. Please try again.') }
-          }}>
-            📄 Download PDF
-          </button>
+            } catch { alert('PDF generation failed.') }
+          }}>📄 PDF</button>
           <button
-            id="linkedin-share-btn"
             className="btn"
-            style={{ background: '#0077b5', color: '#fff', border: 'none' }}
+            style={{ background: '#0a66c2', color: '#fff', fontSize: '0.82rem', padding: '7px 14px' }}
             onClick={() => {
               const score = report?.average_score?.toFixed(1) || '—'
               const rec   = report?.recommendation || ''
-              const emoji = rec === 'EXCELLENT' ? '🏆' : rec === 'NEEDS PRACTICE' ? '📈' : '📊'
-              const text  = encodeURIComponent(
-                `${emoji} Just completed a Verified Proctored Mock Interview on InterviewLoop!\n\n` +
-                `📊 Score: ${score}/10 — ${rec}\n` +
-                `🔐 5-tier biometric security: Face + Voice + TOTP\n` +
-                `🤖 AI interviewer powered by Qwen2.5\n\n` +
-                `This report is cryptographically signed and tamper-evident.\n` +
-                `#TechInterview #MockInterview #CareerPrep #SoftwareEngineering`
-              )
+              const text  = encodeURIComponent(`🏆 Just completed a Verified Mock Interview on InterviewLoop!\n\n📊 Score: ${score}/10 — ${rec}\n#MockInterview #CareerPrep`)
               window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${text}`, '_blank')
             }}
-          >
-            🔗 Share on LinkedIn
-          </button>
-          <button className="btn btn-ghost" onClick={() => window.location.href = '/dashboard'} style={{ marginLeft: 'auto' }}>
-            ← Dashboard
-          </button>
+          >🔗 Share</button>
+          <Link to="/dashboard" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px' }}>← Dashboard</Link>
         </div>
-      </div>
+      </nav>
+
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
 
       {sigResult && (
         <div className={`alert ${sigResult.valid ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: 16 }}>
@@ -354,8 +369,10 @@ export default function Report() {
         }
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: 24, paddingBottom: 32 }}>
-        <Link to="/login" className="btn btn-ghost">← Back to Login</Link>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: 24 }}>
+        <Link to="/dashboard" className="btn btn-ghost">← Back to Dashboard</Link>
       </div>
     </div>
   )

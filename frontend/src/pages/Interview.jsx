@@ -908,24 +908,38 @@ export default function Interview() {
 
   // ── Terminated screen ─────────────────────────────────────────
   if (terminated) return (
-    <div className="page-center">
-      <div className="card" style={{ maxWidth: 420, textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 12 }}>⛔</div>
-        <h2 style={{ color: 'var(--clr-danger)' }}>Session Terminated</h2>
-        <p style={{ color: 'var(--clr-text-muted)', marginBottom: 20 }}>{termReason || 'Your session was ended by the security system.'}</p>
-        <button className="btn btn-ghost" onClick={() => { clearAuth(); navigate('/login', { replace: true }) }}>← Back to Login</button>
+    <div style={{ minHeight: '100vh' }}>
+      <nav className="nav-bar">
+        <div className="nav-logo"><div className="nav-logo-mark">🛡</div><span className="nav-wordmark">InterviewLoop</span></div>
+      </nav>
+      <div className="page-center" style={{ minHeight: 'calc(100vh - 57px)' }}>
+        <div className="card" style={{ maxWidth: 420 }}>
+          <div className="empty-state">
+            <div className="empty-state-icon">⛔</div>
+            <div className="empty-state-title" style={{ color: 'var(--clr-danger)' }}>Session Terminated</div>
+            <div className="empty-state-desc">{termReason || 'Your session was ended by the security system.'}</div>
+            <button className="btn btn-ghost" onClick={() => { clearAuth(); navigate('/login', { replace: true }) }}>← Back to Login</button>
+          </div>
+        </div>
       </div>
     </div>
   )
 
   // ── Ended screen ──────────────────────────────────────────────
   if (ended) return (
-    <div className="page-center">
-      <div className="card" style={{ maxWidth: 420, textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏁</div>
-        <h2>Interview Complete</h2>
-        <p style={{ color: 'var(--clr-text-muted)' }}>Generating your report…</p>
-        <span className="spinner" style={{ width: 36, height: 36, marginTop: 16 }} />
+    <div style={{ minHeight: '100vh' }}>
+      <nav className="nav-bar">
+        <div className="nav-logo"><div className="nav-logo-mark">🛡</div><span className="nav-wordmark">InterviewLoop</span></div>
+      </nav>
+      <div className="page-center" style={{ minHeight: 'calc(100vh - 57px)' }}>
+        <div className="card" style={{ maxWidth: 400 }}>
+          <div className="empty-state">
+            <div className="empty-state-icon">🏁</div>
+            <div className="empty-state-title">Interview Complete</div>
+            <div className="empty-state-desc">Generating your personalised report…</div>
+            <span className="spinner" style={{ width: 32, height: 32 }} />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -949,18 +963,21 @@ export default function Interview() {
       />}
 
       {/* TOP BAR */}
-      <div style={{ padding: '16px 24px', background: 'var(--clr-surface)', borderBottom: '1px solid var(--clr-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="logo-mark">🛡</div>
-          <h1 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>InterviewLoop Interview</h1>
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Interview</span>
         </div>
-        <div style={{ color: 'var(--clr-text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-          Session: {sessionId.split('-')[0]}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ color: 'var(--clr-text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
+            #{sessionId.split('-')[0]}
+          </span>
+          <button className="btn btn-danger" style={{ padding: '7px 16px', fontSize: '0.82rem' }} onClick={() => { if(window.confirm('Are you sure you want to end the interview early?')) handleEnd() }}>
+            ⏹ End Interview
+          </button>
         </div>
-        <button className="btn btn-danger" style={{ padding: '6px 16px', fontSize: '0.8rem' }} onClick={() => { if(window.confirm('Are you sure you want to end the interview early?')) handleEnd() }}>
-          End Interview
-        </button>
-      </div>
+      </nav>
 
       {/* 3-COLUMN GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 260px', gap: 24, padding: 24, flex: 1, maxWidth: 1600, margin: '0 auto', width: '100%' }}>

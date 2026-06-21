@@ -8,7 +8,7 @@
  *   - Interview history table (click row → /report/:sessionId)
  *   - "Start New Mock Interview" CTA
  */
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -37,23 +37,44 @@ function RecPill({ rec }) {
   )
 }
 
+function StatCardSkeleton() {
+  return (
+    <div className="skeleton-card" style={{ borderRadius: 'var(--r-md)' }}>
+      <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 8, marginBottom: 12 }} />
+      <div className="skeleton" style={{ width: '60%', height: 32, borderRadius: 6, marginBottom: 8 }} />
+      <div className="skeleton skeleton-text medium" />
+      <div className="skeleton skeleton-text narrow" style={{ marginTop: 4 }} />
+    </div>
+  )
+}
+
 function StatCard({ icon, label, value, sub, color }) {
   return (
-    <div style={{
-      background: 'var(--clr-surface)', border: '1px solid var(--clr-border)',
-      borderRadius: 'var(--r-md)', padding: '20px 24px',
-      backdropFilter: 'blur(12px)',
-      transition: 'transform 0.18s, border-color 0.18s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = color || 'var(--clr-primary)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--clr-border)' }}
+    <div
+      className="card"
+      style={{
+        padding: '20px 24px',
+        borderRadius: 'var(--r-md)',
+        transition: 'transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
+        cursor: 'default',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-3px)'
+        e.currentTarget.style.borderColor = color || 'var(--clr-primary)'
+        e.currentTarget.style.boxShadow = `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${color || 'var(--clr-primary)'}22`
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = ''
+        e.currentTarget.style.borderColor = ''
+        e.currentTarget.style.boxShadow = ''
+      }}
     >
-      <div style={{ fontSize: '1.6rem', marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: color || 'var(--clr-primary)', lineHeight: 1 }}>
+      <div style={{ fontSize: '1.5rem', marginBottom: 10, lineHeight: 1 }}>{icon}</div>
+      <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: color || 'var(--clr-primary)', lineHeight: 1, letterSpacing: '-0.02em' }}>
         {value}
       </div>
-      <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 6, color: 'var(--clr-text)' }}>{label}</div>
-      {sub && <div style={{ fontSize: '0.72rem', color: 'var(--clr-text-muted)', marginTop: 3 }}>{sub}</div>}
+      <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 8, color: 'var(--clr-text)', letterSpacing: '-0.01em' }}>{label}</div>
+      {sub && <div style={{ fontSize: '0.72rem', color: 'var(--clr-text-muted)', marginTop: 4 }}>{sub}</div>}
     </div>
   )
 }
@@ -96,6 +117,34 @@ function PasswordStrength({ password }) {
         <div style={{ width: `${(strength / 3) * 100}%`, height: '100%', background: colors[idx], transition: 'all 0.3s' }} />
       </div>
       <span style={{ color: colors[idx], fontWeight: 600 }}>{labels[idx]}</span>
+    </div>
+  )
+}
+
+function UserAvatar({ name, onChangePwd, onLogout }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const initials = (name || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  return (
+    <div className="nav-avatar" ref={ref}>
+      <button className="nav-avatar-btn" onClick={() => setOpen(o => !o)} title={name}>
+        {initials}
+      </button>
+      {open && (
+        <div className="nav-dropdown">
+          <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid var(--clr-border)', marginBottom: 4 }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--clr-text)' }}>{name}</div>
+          </div>
+          <button className="nav-dropdown-item" onClick={() => { setOpen(false); onChangePwd() }}>⚙️ Change Password</button>
+          <div className="nav-dropdown-divider" />
+          <button className="nav-dropdown-item danger" onClick={() => { setOpen(false); onLogout() }}>🚪 Sign Out</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -169,8 +218,23 @@ export default function Dashboard() {
   }
 
   if (loading) return (
-    <div className="page-center">
-      <span className="spinner" style={{ width: 40, height: 40 }} />
+    <div style={{ minHeight: '100vh' }}>
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Dashboard</span>
+        </div>
+      </nav>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+        <div className="skeleton" style={{ width: 240, height: 36, borderRadius: 8, marginBottom: 10 }} />
+        <div className="skeleton skeleton-text medium" style={{ marginBottom: 32 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
+          {[1,2,3,4,5].map(i => <StatCardSkeleton key={i} />)}
+        </div>
+        <div className="skeleton-card" style={{ height: 240, marginBottom: 24 }} />
+        <div className="skeleton-card" style={{ height: 180 }} />
+      </div>
     </div>
   )
 
@@ -234,43 +298,33 @@ export default function Dashboard() {
       )}
 
       {/* ── Top nav bar ── */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 32px',
-        background: 'var(--clr-surface)', borderBottom: '1px solid var(--clr-border)',
-        backdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 100,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="logo-mark" style={{ fontSize: '1.4rem' }}>🛡</div>
-          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>InterviewLoop</span>
-          <span style={{
-            marginLeft: 8, fontSize: '0.7rem', padding: '2px 8px',
-            borderRadius: 20, background: 'rgba(99,102,241,0.15)',
-            color: 'var(--clr-primary)', fontWeight: 700, letterSpacing: '0.06em',
-          }}>CAREER ACCELERATOR</span>
+      <nav className="nav-bar">
+        <div className="nav-logo">
+          <div className="nav-logo-mark">🛡</div>
+          <span className="nav-wordmark">InterviewLoop</span>
+          <span className="nav-page-indicator">Dashboard</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
             className="btn btn-primary"
             onClick={() => navigate('/interview')}
             style={{ padding: '8px 18px', fontSize: '0.85rem' }}
           >
-            ▶ New Mock Interview
+            ▶ New Interview
           </button>
-          <button className="btn btn-ghost" onClick={() => setShowChangePwd(true)} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-            Settings
-          </button>
-          <button className="btn btn-ghost" onClick={handleLogout} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-            Logout
-          </button>
+          <UserAvatar
+            name={data?.candidate?.name || ''}
+            onChangePwd={() => setShowChangePwd(true)}
+            onLogout={handleLogout}
+          />
         </div>
       </nav>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
 
-        {/* ── Welcome header ── */}
+        {/* Welcome header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: '1.9rem', fontWeight: 800, marginBottom: 4 }}>
+          <h1 style={{ fontSize: '1.9rem', fontWeight: 800, marginBottom: 4, letterSpacing: '-0.02em' }}>
             Hey, {candidate.name.split(' ')[0]} 👋
           </h1>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
