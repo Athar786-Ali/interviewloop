@@ -456,6 +456,33 @@ AuditLog        — id, session_id, event_type, detail (json), prev_hash, entry_
 
 ---
 
+## ⚙️ Configuration Reference
+
+All tunable constants live in [`backend/config.py`](file:///Users/md.atharali/Desktop/miic-sec/backend/config.py). No environment variable needed — just edit and restart the backend.
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./miic_sec.db` | SQLAlchemy connection string. Swap to PostgreSQL for multi-user deployments. |
+| `PRIVATE_KEY_PATH` | `keys/private_key.pem` | RSA-2048 private key used to sign reports. Auto-generated on first run. |
+| `PUBLIC_KEY_PATH` | `keys/public_key.pem` | RSA public key used for report verification endpoint. |
+| `KEY_PASSWORD` | `b"miicsec_secret"` | Password for the encrypted PEM key file. **Change this in production.** |
+| `JWT_ALGORITHM` | `RS256` | JWT signing algorithm. RS256 uses the same RSA keypair as reports. |
+| `JWT_EXPIRY_HOURS` | `2` | Access token TTL in hours. Reduce for higher security environments. |
+| `FACE_SIMILARITY_THRESHOLD` | `0.35` | Cosine distance upper bound for ArcFace face match (lower = stricter). |
+| `VOICE_SIMILARITY_THRESHOLD` | `0.60` | Cosine similarity lower bound for wav2vec2 voice match (higher = stricter). |
+| `CONTINUOUS_VERIFY_INTERVAL` | `30` | Seconds between background YOLO proctoring checks during an interview. |
+| `MAX_FAILURES_BEFORE_TERMINATE` | `2` | Consecutive proctoring failures before the session is force-terminated. |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL. Override with `OLLAMA_URL` env var for Docker setups. |
+| `OLLAMA_MODEL` | `qwen2.5:7b` | Primary LLM model. Any Ollama-supported model works — see FAQ. |
+| `OLLAMA_FALLBACK_MODEL` | `qwen2.5:3b` | Smaller model used automatically if primary model is unavailable. |
+| `DEEPGRAM_MODEL` | `nova-2` | Deepgram ASR model. `nova-2` offers the best accuracy/speed balance. |
+| `DEEPGRAM_LANGUAGE` | `en-IN` | ASR language hint. Use `en` for global English or `en-AU`, `en-GB`, etc. |
+| `YOLO_MODEL` | `yolov8n.pt` | YOLOv8 weights file for person detection. Swap to `yolov8s.pt` for better accuracy. |
+
+> 💡 **Tuning tip**: Tighten `FACE_SIMILARITY_THRESHOLD` (lower) or `VOICE_SIMILARITY_THRESHOLD` (higher) if you experience false accepts in your deployment environment.
+
+---
+
 ## 🧠 AI Pipeline Details
 
 ### Adaptive Difficulty Algorithm
@@ -482,6 +509,59 @@ Each question prompt includes:
 # Login:       5s recording  → wav2vec2 → 768-d embedding
 # Verify:      cosine_similarity(stored, live) >= 0.60 → pass
 ```
+
+---
+
+## 😶‍🌫️ Emotion Detection & Proctoring Deep-Dive
+
+During every interview session, MIIC-Sec runs a **silent background security pipeline** in parallel with the Q&A. Here's exactly what happens every 30 seconds:
+
+```
+┌──────────────────────── Background Thread (every 30 s) ───────────────────────────┐
+│                                                                                    │
+│  1. Capture webcam frame (OpenCV)                                                  │
+│       ↓                                                                            │
+│  2. YOLOv8 person detection                                                        │
+│     • persons == 1  → ✅ OK                                                        │
+│     • persons  > 1  → ⚠️  Multi-person event → TOTP step-up challenge             │
+│     • persons == 0  → ⚠️  Out-of-frame event → warning (3× → terminate)           │
+│       ↓                                                                            │
+│  3. DeepFace identity re-check (ArcFace)                                           │
+│     • matches enrolled embedding → ✅ OK                                           │
+│     • mismatch                   → 🔴 Identity drift → TOTP step-up              │
+│       ↓                                                                            │
+│  4. Emotion extraction (DeepFace `analyze`)                                        │
+│     • dominant_emotion logged per check interval                                   │
+│     • stored in AuditLog → rendered as timeline in final report                    │
+│       ↓                                                                            │
+│  5. Audio diarization (PyAnnote, if HF_TOKEN set)                                  │
+│     • 1 speaker  → ✅ OK                                                           │
+│     • 2+ speakers → ⚠️  Multiple voices event → AuditLog entry                   │
+│                                                                                    │
+└────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Emotion Labels Tracked
+DeepFace returns one of 7 labels per frame: `happy`, `sad`, `angry`, `fear`, `disgust`, `surprise`, `neutral`. These are recorded in the AuditLog with a timestamp and displayed in the final report as a chronological **emotion timeline** — useful for self-review of stress patterns.
+
+### Tab-Switch Detection
+Frontend JavaScript listens to the `visibilitychange` and `blur` events:
+```javascript
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) postTabSwitch();   // POST /security/tab-switch
+});
+// 1st switch  → yellow warning banner
+// 2nd switch  → orange warning + AuditLog entry
+// 3rd switch  → session force-terminated, report saved in partial state
+```
+
+### TOTP Step-Up Challenge Flow
+When a security anomaly is detected mid-interview:
+1. WebSocket broadcasts `{ event: "STEP_UP_REQUIRED", reason: "multi_person" }` to the frontend
+2. Interview UI overlays a TOTP modal — candidate must enter their 6-digit code
+3. `POST /security/step-up-verify` validates the code
+4. On success: interview resumes seamlessly
+5. On failure (3 attempts): session terminated, partial report generated
 
 ---
 
@@ -641,7 +721,13 @@ Verification
 
 ## 📋 Changelog
 
-### v1.3.0 — Latest
+### v1.4.0 — Latest
+- ✅ **Configuration Reference** — full `config.py` table with tuning guidance added to README
+- ✅ **Emotion Detection & Proctoring deep-dive** — step-by-step pipeline diagram, emotion labels, tab-switch flow, and TOTP step-up challenge documented
+- ✅ **Expanded Roadmap** — new items: SSO/LDAP integration, exportable emotion heatmap, interview replay, group mode
+- ✅ **README restructured** — Configuration Reference and Security deep-dive sections added for contributor clarity
+
+### v1.3.0
 - ✅ **New README sections** — End-to-End User Journey, Interview Tips, Self-Hosting Checklist
 - ✅ **Expanded Author section** — LinkedIn, email, and project background added
 - ✅ **Enriched FAQ** — additional questions on model swapping, multi-user support
@@ -695,6 +781,11 @@ Verification
 - [ ] **Emotion heatmap export** — timeline visualization exportable as PNG
 - [ ] **Interview replay** — recorded session review with synchronized transcript
 - [ ] **Group interview mode** — multi-candidate, single interviewer session
+- [ ] **SSO / LDAP integration** — enterprise single sign-on for institutional deployments
+- [ ] **Offline STT via Whisper** — drop-in replacement for Deepgram for fully air-gapped setups
+- [ ] **AI-generated feedback PDF** — export signed report as a formatted PDF with charts
+- [ ] **Difficulty progression graph** — visualize how adaptive difficulty changed across the session
+- [ ] **Webhook notifications** — POST results to a custom URL (LMS, Slack, etc.) on session end
 
 ---
 
