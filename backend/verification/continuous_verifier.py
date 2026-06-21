@@ -93,19 +93,43 @@ async def terminate_session(
 async def trigger_step_up_totp(
     session_id: str,
     ws_manager: ConnectionManager,
+    db_session_factory=None,
 ) -> None:
     """
     Send a STEP_UP_TOTP_REQUIRED event to the candidate and wait up to
     STEP_UP_TIMEOUT_SECONDS for them to respond via the REST endpoint
     POST /security/step-up-verify.
 
-    The actual verification result is communicated back to the
-    continuous_verification_loop via the module-level step_up_results dict.
+    Before sending the event, checks whether the candidate has a TOTP secret
+    enrolled. If not, the challenge is skipped entirely (the interview continues
+    normally) to avoid permanently locking out email/password-only candidates.
 
     Args:
-        session_id:  UUID of the interview session.
-        ws_manager:  Module-level ConnectionManager singleton.
+        session_id:          UUID of the interview session.
+        ws_manager:          Module-level ConnectionManager singleton.
+        db_session_factory:  Optional callable returning a new SQLAlchemy session.
+                             Required for the enrollment guard to work.
     """
+    # ── Guard: do NOT challenge candidates who have no TOTP enrolled ────────
+    if db_session_factory is not None:
+        try:
+            with db_session_factory() as _db:
+                session_row = _db.query(DBSession).filter(DBSession.id == session_id).first()
+                if session_row:
+                    candidate = _db.query(Candidate).filter(
+                        Candidate.id == session_row.candidate_id
+                    ).first()
+                    if not candidate or not candidate.totp_secret:
+                        logger.warning(
+                            "Skipping step-up: candidate has no TOTP enrolled — session=%s",
+                            session_id,
+                        )
+                        return
+        except Exception as exc:
+            logger.error("trigger_step_up_totp: guard DB check failed: %s", exc)
+            # Fail-open: skip the challenge rather than locking out the candidate
+            return
+
     from websocket.ws_manager import _build_message
 
     msg = _build_message(
@@ -297,7 +321,7 @@ async def continuous_verification_loop(
             logger.warning("IDENTITY_MISMATCH — session=%s similarity=%.4f", session_id, similarity)
 
         # Trigger step-up (outside the DB context to avoid long-held connection)
-        await trigger_step_up_totp(session_id, ws_manager)
+        await trigger_step_up_totp(session_id, ws_manager, db_session_factory=db_session_factory)
 
         # Set up a Future so the REST endpoint can deliver the result
         loop   = asyncio.get_event_loop()

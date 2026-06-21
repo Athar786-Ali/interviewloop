@@ -233,7 +233,8 @@ function useVoiceInput({ onLiveText, onError }) {
 }
 
 // ── Webcam component (continuous capture for face verify) ─────────
-function WebcamPanel({ sessionId, secStatus }) {
+// Only active in simulated pressure mode.
+function WebcamPanel({ sessionId, secStatus, pressureMode }) {
   const videoRef  = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -257,9 +258,9 @@ function WebcamPanel({ sessionId, secStatus }) {
     return new Promise(res => c.toBlob(res, 'image/jpeg', 0.8))
   }
 
-  // Auto-capture every 30s for continuous face check
+  // Auto-capture every 30s for continuous face check — ONLY in simulated mode
   useEffect(() => {
-    if (!camOn || !sessionId) return
+    if (!camOn || !sessionId || pressureMode !== 'simulated') return
     timerRef.current = setInterval(async () => {
       const blob = await capture()
       if (!blob) return
@@ -269,9 +270,24 @@ function WebcamPanel({ sessionId, secStatus }) {
       } catch {}
     }, 30000)
     return () => clearInterval(timerRef.current)
-  }, [camOn, sessionId]) // eslint-disable-line
+  }, [camOn, sessionId, pressureMode]) // eslint-disable-line
 
-  useEffect(() => { startCam(); return stopCam }, []) // eslint-disable-line
+  // Only start the camera in simulated mode
+  useEffect(() => {
+    if (pressureMode !== 'simulated') return
+    startCam()
+    return stopCam
+  }, [pressureMode]) // eslint-disable-line
+
+  if (pressureMode !== 'simulated') {
+    return (
+      <div style={{ border: '2px solid var(--clr-success)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--clr-surface-2)', marginBottom: 16, padding: '20px 16px', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.6rem', marginBottom: 6 }}>🟢</div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--clr-success)', fontWeight: 600 }}>Practice Mode</div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--clr-text-muted)', marginTop: 4 }}>Proctoring inactive</div>
+      </div>
+    )
+  }
 
   const borderColor = secStatus === 'green' ? 'var(--clr-success)' : secStatus === 'red' ? 'var(--clr-danger)' : 'var(--clr-warning)'
 
@@ -289,9 +305,10 @@ function WebcamPanel({ sessionId, secStatus }) {
 }
 
 // ── Step-up TOTP panel ────────────────────────────────────────────
-function StepUpTotp({ sessionId, onPassed }) {
+function StepUpTotp({ sessionId, onPassed, onExitToPractice }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exitLoading, setExitLoading] = useState(false)
   const [error, setError] = useState('')
   const submit = async () => {
     if (code.length !== 6) return
@@ -301,6 +318,15 @@ function StepUpTotp({ sessionId, onPassed }) {
       onPassed()
     } catch (e) { setError(e.response?.data?.detail || 'Verification failed.') }
     finally { setLoading(false) }
+  }
+  const handleExit = async (e) => {
+    e.preventDefault()
+    if (exitLoading) return
+    setExitLoading(true)
+    try {
+      await api.post('/interview/exit-simulated-mode')
+    } catch { /* best-effort */ }
+    finally { onExitToPractice?.() }
   }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
@@ -314,9 +340,16 @@ function StepUpTotp({ sessionId, onPassed }) {
           onKeyDown={e => e.key === 'Enter' && submit()}
           style={{ fontSize: '2rem', letterSpacing: '0.4em', textAlign: 'center', maxWidth: 220, marginBottom: 20, margin: '0 auto', display: 'block' }}
           autoFocus />
-        <button className="btn btn-success" disabled={code.length !== 6 || loading} onClick={submit} style={{ width: '100%', padding: '12px' }}>
+        <button className="btn btn-success" disabled={code.length !== 6 || loading} onClick={submit} style={{ width: '100%', padding: '12px', marginBottom: 16 }}>
           {loading ? <><span className="spinner" /> Verifying…</> : 'Unlock Session'}
         </button>
+        <a
+          href="#"
+          onClick={handleExit}
+          style={{ fontSize: '0.78rem', color: 'var(--clr-text-muted)', textDecoration: 'underline', cursor: exitLoading ? 'wait' : 'pointer' }}
+        >
+          {exitLoading ? 'Switching…' : 'Having trouble? Switch to Just Practice mode'}
+        </a>
       </div>
     </div>
   )
@@ -712,6 +745,9 @@ export default function Interview() {
   const [ended,       setEnded]       = useState(false)
   const [error,       setError]       = useState('')
 
+  // Pressure mode — controls whether proctoring is active
+  const [pressureMode, setPressureMode] = useState('practice')
+
   const wsRef    = useRef(null)
   const timerRef = useRef(null)
   const doneRef  = useRef(false)
@@ -732,9 +768,10 @@ export default function Interview() {
     }, []),
   })
 
-  // WebSocket
+  // WebSocket — only open when in simulated pressure mode
   useEffect(() => {
     if (!sessionId) { navigate('/login'); return }
+    if (pressureMode !== 'simulated') return  // ← Practice mode: no proctoring WS
     const ws = new WebSocket(`${WS_BASE}/ws/candidate/${sessionId}`)
     wsRef.current = ws
     ws.onopen  = () => setWsConnected(true)
@@ -763,7 +800,7 @@ export default function Interview() {
       } catch {}
     }
     return () => ws.close()
-  }, []) // eslint-disable-line
+  }, [pressureMode]) // eslint-disable-line
 
   // Timer
   useEffect(() => {
@@ -778,8 +815,9 @@ export default function Interview() {
     return () => clearInterval(timerRef.current)
   }, [config]) // eslint-disable-line
 
-  // Tab-switch detection
+  // Tab-switch detection — ONLY in simulated mode
   useEffect(() => {
+    if (pressureMode !== 'simulated') return  // ← Practice mode: no tab-switch penalties
     const onVis = async () => {
       if (document.hidden && config) {
         pushAlert('⚠️ Tab switch detected', 'warning')
@@ -797,7 +835,7 @@ export default function Interview() {
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [config])
+  }, [config, pressureMode])
 
   // Extract DSA Template
   const updateQuestionAndTemplate = (qText) => {
@@ -825,6 +863,7 @@ export default function Interview() {
   // ── Start session from setup ──────────────────────────────────
   const handleStart = (data) => {
     setConfig(data)
+    setPressureMode(data.pressure_mode || 'practice')  // ← store mode from backend
     updateQuestionAndTemplate(data.first_question)
     setDifficulty(data.difficulty); setQNum(1)
   }
@@ -902,8 +941,12 @@ export default function Interview() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* TOTP Overlay */}
-      {showTotp && <StepUpTotp sessionId={sessionId} onPassed={() => { setShowTotp(false); setSecStatus('green') }} />}
+      {/* TOTP Overlay — only triggered in simulated mode by WS event */}
+      {showTotp && <StepUpTotp
+        sessionId={sessionId}
+        onPassed={() => { setShowTotp(false); setSecStatus('green') }}
+        onExitToPractice={() => { setShowTotp(false); navigate('/dashboard') }}
+      />}
 
       {/* TOP BAR */}
       <div style={{ padding: '16px 24px', background: 'var(--clr-surface)', borderBottom: '1px solid var(--clr-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -926,7 +969,7 @@ export default function Interview() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="card" style={{ padding: 16 }}>
             <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Live Security Feed</h3>
-            <WebcamPanel sessionId={sessionId} secStatus={secStatus} />
+            <WebcamPanel sessionId={sessionId} secStatus={secStatus} pressureMode={pressureMode} />
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--clr-surface-2)', borderRadius: 'var(--r-sm)' }}>

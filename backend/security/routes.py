@@ -340,6 +340,21 @@ async def face_recheck(
     if not session_id or not candidate_id:
         raise HTTPException(status_code=400, detail="Missing auth payload")
 
+    # ── Defense-in-depth: skip ALL proctoring if not in simulated mode ────────
+    session = db.query(DBSession).filter(DBSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.pressure_mode != "simulated":
+        logger.info(
+            "face-recheck skipped — session=%s pressure_mode=%s (proctoring only active in simulated mode)",
+            session_id, session.pressure_mode,
+        )
+        return {
+            "status": "skipped",
+            "message": "Proctoring not active in practice mode",
+        }
+
     # Read image
     img_bytes = await frame.read()
     nparr = np.frombuffer(img_bytes, np.uint8)
@@ -390,8 +405,9 @@ async def face_recheck(
                 detail={"similarity": similarity},
                 db_session=db
             )
-            # Trigger TOTP
-            await trigger_step_up_totp(session_id, ws_manager)
+            # Trigger TOTP (guard inside will skip if candidate has no totp_secret)
+            from database import SessionLocal
+            await trigger_step_up_totp(session_id, ws_manager, db_session_factory=SessionLocal)
             return {"status": "identity_mismatch", "similarity": similarity}
             
     except Exception as e:

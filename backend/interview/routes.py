@@ -10,6 +10,7 @@ import threading
 import uuid
 import asyncio
 import os
+from datetime import datetime, timezone
 from queue import Queue
 
 logger = logging.getLogger(__name__)
@@ -496,6 +497,60 @@ async def start_interview(
     }
 
 
+# ═══════════════════════════════════════════════════════════════════
+# POST /interview/exit-simulated-mode
+# ═══════════════════════════════════════════════════════════════════
+
+@router.post("/exit-simulated-mode", summary="Escape a stuck simulated session, return to practice")
+async def exit_simulated_mode(
+    payload: dict     = Depends(get_token_payload),
+    db:      DBSession = Depends(get_db),
+):
+    """
+    Emergency escape hatch — called when a candidate is stuck in a
+    STEP_UP_TOTP_REQUIRED modal they cannot complete (e.g., no TOTP
+    enrolled).
+
+    Marks the current session as TERMINATED in the database so the
+    candidate can start a fresh session in practice mode without
+    leaving a zombie active session behind.
+
+    Returns:
+        { message: str }
+    """
+    session_id: str = payload.get("session_id", "")
+
+    if not session_id:
+        raise HTTPException(status_code=400, detail="No active session in token")
+
+    session_row = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if session_row and session_row.status == "ACTIVE":
+        session_row.status   = "TERMINATED"
+        session_row.ended_at = datetime.now(timezone.utc)
+        db.commit()
+        logger.info("exit-simulated-mode: session %s terminated by candidate request", session_id)
+
+    # Clean up in-memory emotion thread / frame queues (same as /interview/end)
+    stop_ev = _stop_events.pop(session_id, None)
+    if stop_ev:
+        stop_ev.set()
+    _frame_queues.pop(session_id, None)
+    _audio_queues.pop(session_id, None)
+    _emotion_threads.pop(session_id, None)
+    # Also remove from session_store if present
+    session_store.pop(session_id, None)
+
+    try:
+        log_event(
+            session_id = session_id,
+            event_type = "SESSION_EXIT_SIMULATED",
+            detail     = {"reason": "Candidate requested exit from simulated mode"},
+            db_session = db,
+        )
+    except Exception as exc:
+        logger.warning("audit log failed in exit-simulated-mode: %s", exc)
+
+    return {"message": "Session ended. You can now start a new practice session."}
 
 
 
