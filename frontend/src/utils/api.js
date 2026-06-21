@@ -20,9 +20,9 @@
 import axios from 'axios'
 
 const KEYS = {
-  token:       'miic_token',
-  sessionId:   'miic_session_id',
-  candidateId: 'miic_candidate_id',
+  token:       'interviewloop_token',
+  sessionId:   'interviewloop_session_id',
+  candidateId: 'interviewloop_candidate_id',
 }
 
 // ── Resolve backend base URL ──────────────────────────────────────────────────

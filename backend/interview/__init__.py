@@ -1,2 +1,2 @@
-# MIIC-Sec Interview Module
+# InterviewLoop Interview Module
 # Adaptive AI-powered interview engine

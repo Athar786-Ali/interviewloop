@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Topic Performance Tracker (Phase 2)
+InterviewLoop — Topic Performance Tracker (Phase 2)
 Upserts per-topic scores and computes progress analytics.
 """
 

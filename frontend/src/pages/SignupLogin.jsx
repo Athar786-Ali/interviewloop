@@ -80,10 +80,32 @@ function OtpInput({ value, onChange }) {
   )
 }
 
+// ─── Password Strength Indicator ───────────────────────────────────────────
+function PasswordStrength({ password }) {
+  if (!password) return null;
+  let strength = 0;
+  if (password.length >= 6) strength += 1;
+  if (/[0-9]/.test(password)) strength += 1;
+  if (/[A-Z]/.test(password)) strength += 1;
+  
+  const labels = ['Weak', 'Medium', 'Strong'];
+  const colors = ['var(--clr-danger)', 'var(--clr-warning)', 'var(--clr-success)'];
+  const idx = Math.min(Math.max(strength - 1, 0), 2);
+  
+  return (
+    <div style={{ fontSize: '0.75rem', marginTop: -10, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 4, background: 'var(--clr-surface-2)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ width: `${(strength / 3) * 100}%`, height: '100%', background: colors[idx], transition: 'all 0.3s' }} />
+      </div>
+      <span style={{ color: colors[idx], fontWeight: 600 }}>{labels[idx]}</span>
+    </div>
+  )
+}
+
 export default function SignupLogin() {
   const navigate = useNavigate()
   const [tab,         setTab]         = useState('login')   // 'login' | 'signup'
-  const [screen,      setScreen]      = useState('form')    // 'form' | 'otp'
+  const [screen,      setScreen]      = useState('form')    // 'form' | 'otp' | 'forgot-request' | 'forgot-reset'
   const [toast,       setToast]       = useState(null)
   const [loading,     setLoading]     = useState(false)
 
@@ -95,6 +117,12 @@ export default function SignupLogin() {
   const [signupName,     setSignupName]     = useState('')
   const [signupEmail,    setSignupEmail]    = useState('')
   const [signupPassword, setSignupPassword] = useState('')
+  const [signupConfirm,  setSignupConfirm]  = useState('')
+
+  // Forgot password fields
+  const [forgotEmail,    setForgotEmail]    = useState('')
+  const [resetPassword,  setResetPassword]  = useState('')
+  const [resetConfirm,   setResetConfirm]   = useState('')
 
   // OTP fields
   const [otpCode,   setOtpCode]   = useState('')
@@ -155,7 +183,8 @@ export default function SignupLogin() {
   const handleSignup = async (e) => {
     e.preventDefault()
     clearToast()
-    if (!signupName || !signupEmail || !signupPassword) { showToast('Please fill in all fields.'); return }
+    if (!signupName || !signupEmail || !signupPassword || !signupConfirm) { showToast('Please fill in all fields.'); return }
+    if (signupPassword !== signupConfirm) { showToast('Passwords do not match.'); return }
     if (signupPassword.length < 6) { showToast('Password must be at least 6 characters.'); return }
     setLoading(true)
     try {
@@ -169,6 +198,13 @@ export default function SignupLogin() {
       startCooldown()
       showToast('Account created! Check your email for a 6-digit code.', 'success')
     } catch (err) {
+      if (err.response?.data?.error === 'unverified_account') {
+        setOtpEmail(signupEmail.trim().toLowerCase())
+        setScreen('otp')
+        startCooldown()
+        showToast(err.response.data.detail || "Account exists but isn't verified. A new code was sent.", 'info')
+        return
+      }
       const detail = err.response?.data?.detail
       showToast(typeof detail === 'string' ? detail : 'Signup failed. Please try again.')
     } finally {
@@ -218,11 +254,65 @@ export default function SignupLogin() {
     if (resendCd > 0) return
     setLoading(true)
     try {
-      await api.post('/auth/resend-otp', { email: otpEmail })
+      // Different resend endpoints based on flow
+      if (screen === 'forgot-reset') {
+        await api.post('/auth/forgot-password', { email: otpEmail })
+      } else {
+        await api.post('/auth/resend-otp', { email: otpEmail })
+      }
       startCooldown()
       showToast('New code sent! Check your inbox.', 'success')
     } catch (err) {
-      showToast('Could not resend code. Please try again.')
+      const detail = err.response?.data?.detail
+      showToast(typeof detail === 'string' ? detail : 'Could not resend code. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Forgot Password ──────────────────────────────────────────────────────
+  const handleForgotRequest = async (e) => {
+    e.preventDefault()
+    clearToast()
+    if (!forgotEmail) { showToast('Please enter your email.'); return }
+    setLoading(true)
+    try {
+      await api.post('/auth/forgot-password', { email: forgotEmail.trim().toLowerCase() })
+      setOtpEmail(forgotEmail.trim().toLowerCase())
+      setScreen('forgot-reset')
+      startCooldown()
+      showToast("If an account exists, we've sent a password reset code.", 'success')
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      showToast(typeof detail === 'string' ? detail : 'Could not request reset. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgotReset = async (e) => {
+    e.preventDefault()
+    clearToast()
+    if (otpCode.length !== 6) { showToast('Enter the 6-digit code.'); return }
+    if (resetPassword.length < 6) { showToast('Password must be at least 6 characters.'); return }
+    if (resetPassword !== resetConfirm) { showToast('Passwords do not match.'); return }
+    setLoading(true)
+    try {
+      await api.post('/auth/reset-password', {
+        email: otpEmail,
+        otp_code: otpCode,
+        new_password: resetPassword
+      })
+      showToast('Password reset successful! Please log in.', 'success')
+      setScreen('form')
+      setTab('login')
+      setLoginEmail(otpEmail)
+      setOtpCode('')
+      setResetPassword('')
+      setResetConfirm('')
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      showToast(typeof detail === 'string' ? detail : 'That code is invalid or has expired. Request a new one.')
     } finally {
       setLoading(false)
     }
@@ -237,7 +327,7 @@ export default function SignupLogin() {
         {/* Header */}
         <div className="page-header" style={{ marginBottom: 24 }}>
           <div className="logo-mark">🛡</div>
-          <h1>MIIC-Sec</h1>
+          <h1>InterviewLoop</h1>
           <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.88rem', marginTop: 4 }}>
             AI-Powered Mock Interview Practice
           </p>
@@ -277,6 +367,11 @@ export default function SignupLogin() {
                 <Field id="lp" label="Password" type="password"
                   value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
                   placeholder="••••••••" />
+                <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
+                  <button type="button" onClick={() => { setScreen('forgot-request'); clearToast(); setForgotEmail(loginEmail); }} style={{
+                    background: 'none', border: 'none', color: 'var(--clr-primary)', fontSize: '0.78rem', cursor: 'pointer'
+                  }}>Forgot Password?</button>
+                </div>
                 <button
                   type="submit"
                   className="btn btn-primary"
@@ -299,6 +394,10 @@ export default function SignupLogin() {
                   placeholder="you@example.com" />
                 <Field id="sp" label="Password (min. 6 chars)" type="password"
                   value={signupPassword} onChange={e => setSignupPassword(e.target.value)}
+                  placeholder="••••••••" />
+                <PasswordStrength password={signupPassword} />
+                <Field id="scp" label="Confirm Password" type="password"
+                  value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)}
                   placeholder="••••••••" />
                 <button
                   type="submit"
@@ -374,6 +473,69 @@ export default function SignupLogin() {
               }}
             >
               ← Back
+            </button>
+          </div>
+        )}
+
+        {/* Forgot Password Request Screen */}
+        {screen === 'forgot-request' && (
+          <div>
+            <h2 style={{ marginBottom: 8 }}>Reset Password</h2>
+            <p style={{ color: 'var(--clr-text-muted)', marginBottom: 24, fontSize: '0.9rem' }}>
+              Enter your email and we'll send you a code to reset your password.
+            </p>
+            <form onSubmit={handleForgotRequest}>
+              <Field id="fe" label="Email Address" type="email" value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)} placeholder="you@example.com" autoFocus />
+              <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
+                {loading ? <><span className="spinner" />Sending…</> : 'Send Code'}
+              </button>
+            </form>
+            <button onClick={() => { setScreen('form'); clearToast() }} style={{
+              marginTop: 16, background: 'none', border: 'none', color: 'var(--clr-text-muted)',
+              cursor: 'pointer', fontSize: '0.82rem', width: '100%'
+            }}>
+              ← Back to Login
+            </button>
+          </div>
+        )}
+
+        {/* Forgot Password Reset Screen */}
+        {screen === 'forgot-reset' && (
+          <div>
+            <h2 style={{ marginBottom: 8 }}>Create New Password</h2>
+            <p style={{ color: 'var(--clr-text-muted)', marginBottom: 24, fontSize: '0.9rem' }}>
+              Enter the 6-digit code sent to <strong>{otpEmail}</strong> and your new password.
+            </p>
+            <form onSubmit={handleForgotReset}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6, color: 'var(--clr-text-muted)', textAlign: 'center' }}>
+                  Verification Code
+                </label>
+                <OtpInput value={otpCode} onChange={setOtpCode} />
+              </div>
+              <Field id="rp" label="New Password (min. 6 chars)" type="password" value={resetPassword}
+                onChange={e => setResetPassword(e.target.value)} placeholder="••••••••" />
+              <PasswordStrength password={resetPassword} />
+              <Field id="rcp" label="Confirm Password" type="password" value={resetConfirm}
+                onChange={e => setResetConfirm(e.target.value)} placeholder="••••••••" />
+              <button type="submit" className="btn btn-success" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
+                {loading ? <><span className="spinner" />Resetting…</> : 'Reset Password'}
+              </button>
+            </form>
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <button onClick={handleResend} disabled={resendCd > 0 || loading} style={{
+                background: 'none', border: 'none', color: resendCd > 0 ? 'var(--clr-text-muted)' : 'var(--clr-primary)',
+                cursor: resendCd > 0 ? 'default' : 'pointer', fontSize: '0.85rem', textDecoration: 'underline',
+              }}>
+                {resendCd > 0 ? `Resend code in ${resendCd}s` : 'Resend code'}
+              </button>
+            </div>
+            <button onClick={() => { setScreen('form'); setOtpCode(''); clearToast() }} style={{
+              marginTop: 16, background: 'none', border: 'none', color: 'var(--clr-text-muted)',
+              cursor: 'pointer', fontSize: '0.82rem', width: '100%'
+            }}>
+              ← Cancel
             </button>
           </div>
         )}

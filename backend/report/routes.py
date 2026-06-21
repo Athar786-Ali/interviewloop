@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Report Routes
+InterviewLoop — Report Routes
 Serve, verify, and download signed interview reports.
 """
 
@@ -128,7 +128,7 @@ async def download_report_pdf(
         return FileResponse(
             path=pdf_path,
             media_type="application/pdf",
-            filename=f"miic_report_{session_id[:8]}.pdf",
+            filename=f"interviewloop_report_{session_id[:8]}.pdf",
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

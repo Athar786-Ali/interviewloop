@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Phase 6 Tests
+InterviewLoop — Phase 6 Tests
 Verifies the voice-to-text pipeline contracts:
   - Audio upload returns 400 (not 500) on bad audio
   - WAV input is accepted and passed to Whisper with expected options

@@ -1,5 +1,5 @@
 """
-MIIC-Sec — FastAPI Application Entry Point (Final)
+InterviewLoop — FastAPI Application Entry Point (Final)
 All 5 security tiers wired together.
 """
 
@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
 
     # System status table
     print("\n" + "═" * 52)
-    print("  MIIC-Sec — System Status")
+    print("  InterviewLoop — System Status")
     print("═" * 52)
     print(f"  {'Database':30s}  ✅ ready")
     print(f"  {'RSA-2048 keys':30s}  ✅ ready")
@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
         ws_manager.disconnect(sid, "candidate")
         ws_manager.disconnect(sid, "recruiter")
 
-    print("🛑 MIIC-Sec backend stopped")
+    print("🛑 InterviewLoop backend stopped")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -148,7 +148,7 @@ async def lifespan(app: FastAPI):
 # ═════════════════════════════════════════════════════════════════════════════
 
 app = FastAPI(
-    title="MIIC-Sec",
+    title="InterviewLoop",
     description=(
         "AI-Powered Secure Interview Platform — "
         "5-tier cryptographic identity verification system."

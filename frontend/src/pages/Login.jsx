@@ -121,7 +121,7 @@ function VoiceRecorder({ onDone }) {
         borderRadius: 'var(--r-md)', padding: '12px 16px', marginBottom: 20,
         fontStyle: 'italic', color: 'var(--clr-text)', lineHeight: 1.6,
       }}>
-        "My name is [your name] and I confirm my identity for the MIIC secure interview platform."
+        "My name is [your name] and I confirm my identity for the InterviewLoop secure interview platform."
       </div>
 
       {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
@@ -265,7 +265,7 @@ export default function Login() {
       <div className="card" style={{ width: '100%', maxWidth: 480 }}>
         <div className="page-header">
           <div className="logo-mark">🛡</div>
-          <h1>MIIC-Sec Login</h1>
+          <h1>InterviewLoop Login</h1>
         </div>
 
         {step > 0 && <StepBar current={step} />}

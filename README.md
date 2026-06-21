@@ -1,16 +1,16 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/MIIC--Sec-AI%20Interview%20Platform-6366f1?style=for-the-badge&logo=shield&logoColor=white" />
+<img src="https://img.shields.io/badge/InterviewLoop--Sec-AI%20Interview%20Platform-6366f1?style=for-the-badge&logo=shield&logoColor=white" />
 
-# 🛡️ MIIC-Sec
+# 🔄 InterviewLoop
 ### AI-Powered Mock Interview & Student Career Accelerator Platform
 
 <p>
-  <img src="https://img.shields.io/github/stars/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Stars&color=FFD700" />
-  <img src="https://img.shields.io/github/forks/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Forks&color=6366f1" />
-  <img src="https://img.shields.io/github/issues/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=Issues&color=orange" />
-  <img src="https://img.shields.io/github/issues-pr/Athar786-Ali/miic-sec?style=flat-square&logo=github&label=PRs&color=brightgreen" />
-  <img src="https://img.shields.io/github/last-commit/Athar786-Ali/miic-sec?style=flat-square&logo=git&label=Last%20Commit&color=blue" />
+  <img src="https://img.shields.io/github/stars/Athar786-Ali/interviewloop?style=flat-square&logo=github&label=Stars&color=FFD700" />
+  <img src="https://img.shields.io/github/forks/Athar786-Ali/interviewloop?style=flat-square&logo=github&label=Forks&color=6366f1" />
+  <img src="https://img.shields.io/github/issues/Athar786-Ali/interviewloop?style=flat-square&logo=github&label=Issues&color=orange" />
+  <img src="https://img.shields.io/github/issues-pr/Athar786-Ali/interviewloop?style=flat-square&logo=github&label=PRs&color=brightgreen" />
+  <img src="https://img.shields.io/github/last-commit/Athar786-Ali/interviewloop?style=flat-square&logo=git&label=Last%20Commit&color=blue" />
 </p>
 
 <p>
@@ -48,7 +48,7 @@
 
 ## 🎯 What This Project Does
 
-MIIC-Sec is a **full-stack AI mock interview system** built entirely from scratch. It solves a real problem — students preparing for tech interviews have no safe, pressure-simulated, feedback-rich environment that mirrors real company conditions.
+InterviewLoop is a **full-stack AI mock interview system** built entirely from scratch. It solves a real problem — students preparing for tech interviews have no safe, pressure-simulated, feedback-rich environment that mirrors real company conditions.
 
 **Core mission**: Help students overcome interview anxiety and fear by simulating realistic interview pressure in a judgment-free environment, with clear, honest, actionable feedback and measurable growth over time.
 
@@ -117,7 +117,7 @@ After every answer, students see two coaching cards instead of a raw score:
 ### 📄 Phase 5 — Progress Proof (PDF Export)
 - **Per-session PDF** — `GET /report/{session_id}/pdf` — includes score table, Q-by-Q breakdown, detailed feedback, RSA signature status
 - **Cumulative Growth Report PDF** — `GET /user/progress/pdf` — topic performance table, focus areas, improved topics, session score timeline
-- Styled with MIIC-Sec's indigo/violet color palette (ReportLab)
+- Styled with InterviewLoop's indigo/violet color palette (ReportLab)
 - Download buttons on both the Report page and Dashboard
 
 ### ✨ Phase 6 — UX Polish
@@ -207,7 +207,7 @@ After every answer, students see two coaching cards instead of a raw score:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        MIIC-Sec Platform                        │
+│                        InterviewLoop Platform                        │
 │                                                                 │
 │  React Frontend (Vite)         FastAPI Backend (port 8000)      │
 │  ┌─────────────────┐           ┌───────────────────────────┐   │
@@ -308,7 +308,7 @@ Tamper any one event → all subsequent hashes break → detectable.
 ## 📁 Project Structure
 
 ```
-miic-sec/
+interviewloop/
 ├── backend/
 │   ├── main.py                    # FastAPI app, CORS, lifespan, router registration
 │   ├── config.py                  # All constants: thresholds, model names, SMTP
@@ -426,8 +426,8 @@ miic-sec/
 
 ```bash
 # 1. Clone
-git clone https://github.com/Athar786-Ali/miic-sec.git
-cd miic-sec
+git clone https://github.com/Athar786-Ali/interviewloop.git
+cd interviewloop
 
 # 2. Pull LLM model (one-time, ~4 GB)
 ollama pull qwen2.5:7b
@@ -459,11 +459,11 @@ npm run dev
 ### Option B — Docker Compose
 
 ```bash
-cd miic-sec
+cd interviewloop
 docker compose up --build
 
 # First time: pull the LLM inside the container
-docker exec -it miic_ollama ollama pull qwen2.5:7b
+docker exec -it interviewloop_ollama ollama pull qwen2.5:7b
 ```
 
 ### Environment Variables (`backend/.env`)
@@ -576,7 +576,7 @@ All tunable constants live in [`backend/config.py`](backend/config.py). Edit and
 
 | Constant | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./miic_sec.db` | SQLAlchemy connection string |
+| `DATABASE_URL` | `sqlite:///./interviewloop.db` | SQLAlchemy connection string |
 | `PRIVATE_KEY_PATH` | `keys/private_key.pem` | RSA-2048 private key — auto-generated |
 | `JWT_EXPIRY_HOURS` | `2` | Access token TTL |
 | `FACE_SIMILARITY_THRESHOLD` | `0.35` | ArcFace cosine distance upper bound |
@@ -629,7 +629,7 @@ upsert_topic_performance(candidate_id, topic, question_score, db)
 
 ## 😶‍🌫️ Emotion Detection & Proctoring Deep-Dive
 
-During simulated mode, MIIC-Sec runs a **silent background security pipeline**:
+During simulated mode, InterviewLoop runs a **silent background security pipeline**:
 
 ```
 ┌──────────────────────── Background Thread (every 30 s) ───────────────────────────┐
@@ -820,7 +820,7 @@ Verification
 ### v1.2.0
 - ✅ Expanded test suite — 6 phase files covering every subsystem
 - ✅ Nginx HTTPS deployment guide added
-- ✅ Competitor comparison table — MIIC-Sec vs HireVue, Interviewing.io, LeetCode
+- ✅ Competitor comparison table — InterviewLoop vs HireVue, Interviewing.io, LeetCode
 
 ### v1.1.0
 - ✅ Replaced Whisper with **Deepgram nova-2** for real-time WebSocket STT (300 ms latency)
@@ -876,7 +876,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/your.domain.com/privkey.pem;
 
     # Serve React build
-    root /var/www/miic-sec/frontend/dist;
+    root /var/www/interviewloop/frontend/dist;
     index index.html;
     location / { try_files $uri /index.html; }
 
@@ -931,7 +931,7 @@ B.Tech CSE student | AI + Security enthusiast
 - 💼 LinkedIn: [linkedin.com/in/atharali](https://linkedin.com/in/atharali)
 - 📧 Email: available on GitHub profile
 
-> MIIC-Sec was built as a major personal project to explore the intersection of biometric security, local LLM inference, and student-focused UX design. Every component was implemented from scratch — no off-the-shelf interview SaaS, no pre-built auth SDK.
+> InterviewLoop was built as a major personal project to explore the intersection of biometric security, local LLM inference, and student-focused UX design. Every component was implemented from scratch — no off-the-shelf interview SaaS, no pre-built auth SDK.
 
 ---
 
@@ -945,5 +945,5 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
   <sub>Built with ❤️ for students who want to ace their interviews without fear.</sub><br/>
-  <sub>🛡️ MIIC-Sec — Mock Interview with Intelligence, Integrity & Confidence</sub>
+  <sub>🔄 InterviewLoop — Mock Interview with Intelligence, Integrity & Confidence</sub>
 </div>

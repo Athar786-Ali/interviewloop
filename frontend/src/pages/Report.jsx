@@ -193,7 +193,7 @@ export default function Report() {
             try {
               const resp = await api.get(`/report/${sessionId}/pdf`, { responseType: 'blob' })
               const url  = URL.createObjectURL(resp.data)
-              const a    = document.createElement('a'); a.href = url; a.download = `miic_report_${sessionId.slice(0,8)}.pdf`
+              const a    = document.createElement('a'); a.href = url; a.download = `interviewloop_report_${sessionId.slice(0,8)}.pdf`
               document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
             } catch { alert('PDF generation failed. Please try again.') }
           }}>
@@ -208,7 +208,7 @@ export default function Report() {
               const rec   = report?.recommendation || ''
               const emoji = rec === 'EXCELLENT' ? '🏆' : rec === 'NEEDS PRACTICE' ? '📈' : '📊'
               const text  = encodeURIComponent(
-                `${emoji} Just completed a Verified Proctored Mock Interview on MIIC-Sec!\n\n` +
+                `${emoji} Just completed a Verified Proctored Mock Interview on InterviewLoop!\n\n` +
                 `📊 Score: ${score}/10 — ${rec}\n` +
                 `🔐 5-tier biometric security: Face + Voice + TOTP\n` +
                 `🤖 AI interviewer powered by Qwen2.5\n\n` +

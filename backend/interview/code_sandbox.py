@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Code Sandbox
+InterviewLoop — Code Sandbox
 Static analysis (Bandit) + Docker-isolated execution for candidate code.
 
 IMPORTANT: Docker must be running on the host machine.
@@ -60,7 +60,7 @@ def run_static_analysis(code: str, language: str) -> List[dict]:
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 suffix=".py",
-                prefix="miic_bandit_",
+                prefix="interviewloop_bandit_",
                 delete=False,
             ) as tmp:
                 tmp.write(code)
@@ -130,7 +130,7 @@ def execute_in_sandbox(code: str, language: str, session_id: str) -> dict:
             "exit_code":          int
         }
     """
-    tmp_path = f"/tmp/miic_sandbox_{session_id}.py"
+    tmp_path = f"/tmp/interviewloop_sandbox_{session_id}.py"
 
     # Write code to host temp file (mounted read-only into container)
     try:

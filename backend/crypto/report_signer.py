@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Cryptographic Report Signer (Tier 5)
+InterviewLoop — Cryptographic Report Signer (Tier 5)
 Generates a tamper-evident interview report signed with RSA-2048 / SHA-256.
 
 Flow:
@@ -340,7 +340,7 @@ def generate_full_report(
     report_path   = save_report(signed_report, session_id)
 
     print(
-        f"[MIIC-Sec] 📄 Report generated — "
+        f"[InterviewLoop] 📄 Report generated — "
         f"session={session_id} "
         f"recommendation={report['recommendation']} "
         f"path={report_path}"

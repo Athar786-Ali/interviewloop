@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Speaker Diarization (Tier 4)
+InterviewLoop — Speaker Diarization (Tier 4)
 Detects multiple speakers in audio chunks using pyannote.audio.
 
 REQUIRES: HuggingFace token accepted for pyannote/speaker-diarization-3.1

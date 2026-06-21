@@ -65,6 +65,41 @@ const COMPANY_LABELS = {
   '':       '—',
 }
 
+function Toast({ msg, type = 'danger', onClose }) {
+  if (!msg) return null
+  const colors = { danger: 'var(--clr-danger)', success: 'var(--clr-success)', info: 'var(--clr-primary)' }
+  return (
+    <div style={{
+      position: 'fixed', top: 20, right: 20, zIndex: 9999,
+      background: 'var(--clr-surface-2)', border: `1px solid ${colors[type]}`,
+      borderRadius: 'var(--r-md)', padding: '12px 18px', maxWidth: 360,
+      boxShadow: '0 4px 24px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', gap: 10,
+    }}>
+      <span style={{ flex: 1, fontSize: '0.9rem', color: 'var(--clr-text)', lineHeight: 1.5 }}>{msg}</span>
+      <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+    </div>
+  )
+}
+
+function PasswordStrength({ password }) {
+  if (!password) return null;
+  let strength = 0;
+  if (password.length >= 6) strength += 1;
+  if (/[0-9]/.test(password)) strength += 1;
+  if (/[A-Z]/.test(password)) strength += 1;
+  const labels = ['Weak', 'Medium', 'Strong'];
+  const colors = ['var(--clr-danger)', 'var(--clr-warning)', 'var(--clr-success)'];
+  const idx = Math.min(Math.max(strength - 1, 0), 2);
+  return (
+    <div style={{ fontSize: '0.75rem', marginTop: -10, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 4, background: 'var(--clr-surface-2)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ width: `${(strength / 3) * 100}%`, height: '100%', background: colors[idx], transition: 'all 0.3s' }} />
+      </div>
+      <span style={{ color: colors[idx], fontWeight: 600 }}>{labels[idx]}</span>
+    </div>
+  )
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate  = useNavigate()
@@ -72,10 +107,20 @@ export default function Dashboard() {
   const [progress,  setProgress]  = useState(null)   // Phase 2
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
+  const [toast,     setToast]     = useState(null)
   const [walkDone,  setWalkDone]  = useState(() =>    // Phase 6
-    localStorage.getItem('miic_walkthrough_dismissed') === '1'
+    localStorage.getItem('interviewloop_walkthrough_dismissed') === '1'
   )
   const [pdfLoading, setPdfLoading] = useState(false)  // Phase 5
+
+  // Change Password State
+  const [showChangePwd, setShowChangePwd] = useState(false)
+  const [oldPwd, setOldPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdLoading, setPwdLoading] = useState(false)
+
+  const showToast = (msg, type = 'danger') => setToast({ msg, type })
 
   useEffect(() => {
     Promise.all([
@@ -95,10 +140,32 @@ export default function Dashboard() {
     try {
       const resp = await api.get('/user/progress/pdf', { responseType: 'blob' })
       const url  = URL.createObjectURL(resp.data)
-      const a    = document.createElement('a'); a.href = url; a.download = 'miic_growth_report.pdf'; a.click()
+      const a    = document.createElement('a'); a.href = url; a.download = 'interviewloop_growth_report.pdf'; a.click()
       URL.revokeObjectURL(url)
     } catch { /* silently fail */ }
     finally { setPdfLoading(false) }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setToast(null)
+    if (!oldPwd || !newPwd || !confirmPwd) { showToast('Please fill all fields.'); return }
+    if (newPwd.length < 6) { showToast('New password must be at least 6 characters.'); return }
+    if (newPwd !== confirmPwd) { showToast('New passwords do not match.'); return }
+    setPwdLoading(true)
+    try {
+      await api.post('/auth/change-password', { old_password: oldPwd, new_password: newPwd })
+      setShowChangePwd(false)
+      showToast('Password changed successfully.', 'success')
+      setOldPwd('')
+      setNewPwd('')
+      setConfirmPwd('')
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      showToast(typeof detail === 'string' ? detail : 'Could not change password.', 'danger')
+    } finally {
+      setPwdLoading(false)
+    }
   }
 
   if (loading) return (
@@ -131,6 +198,40 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: '100vh', padding: '0 0 64px' }}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* ── Change Password Modal ── */}
+      {showChangePwd && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 20 }}>Change Password</h3>
+            <form onSubmit={handleChangePassword}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6, color: 'var(--clr-text-muted)' }}>Old Password</label>
+                <input className="input" type="password" value={oldPwd} onChange={e => setOldPwd(e.target.value)} style={{ width: '100%' }} autoFocus />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6, color: 'var(--clr-text-muted)' }}>New Password</label>
+                <input className="input" type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} style={{ width: '100%' }} />
+              </div>
+              <PasswordStrength password={newPwd} />
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6, color: 'var(--clr-text-muted)' }}>Confirm New Password</label>
+                <input className="input" type="password" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} style={{ width: '100%' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowChangePwd(false)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={pwdLoading} style={{ flex: 1 }}>
+                  {pwdLoading ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Top nav bar ── */}
       <nav style={{
@@ -141,7 +242,7 @@ export default function Dashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="logo-mark" style={{ fontSize: '1.4rem' }}>🛡</div>
-          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>MIIC-Sec</span>
+          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>InterviewLoop</span>
           <span style={{
             marginLeft: 8, fontSize: '0.7rem', padding: '2px 8px',
             borderRadius: 20, background: 'rgba(99,102,241,0.15)',
@@ -155,6 +256,9 @@ export default function Dashboard() {
             style={{ padding: '8px 18px', fontSize: '0.85rem' }}
           >
             ▶ New Mock Interview
+          </button>
+          <button className="btn btn-ghost" onClick={() => setShowChangePwd(true)} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+            Settings
           </button>
           <button className="btn btn-ghost" onClick={handleLogout} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
             Logout
@@ -198,7 +302,7 @@ export default function Dashboard() {
           <div className="card" style={{ marginBottom: 24, background: 'rgba(99,102,241,0.08)', borderColor: 'var(--clr-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div>
-                <h3 style={{ margin: '0 0 8px', color: 'var(--clr-primary)' }}>👋 Welcome to MIIC-Sec!</h3>
+                <h3 style={{ margin: '0 0 8px', color: 'var(--clr-primary)' }}>👋 Welcome to InterviewLoop!</h3>
                 <p style={{ margin: '0 0 12px', fontSize: '0.88rem', color: 'var(--clr-text-muted)', lineHeight: 1.6 }}>
                   This is your personal interview practice hub. Here's how to get started:
                 </p>
@@ -217,7 +321,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <button
-                onClick={() => { localStorage.setItem('miic_walkthrough_dismissed', '1'); setWalkDone(true) }}
+                onClick={() => { localStorage.setItem('interviewloop_walkthrough_dismissed', '1'); setWalkDone(true) }}
                 style={{ background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0 }}
                 title="Dismiss"
               >✕</button>

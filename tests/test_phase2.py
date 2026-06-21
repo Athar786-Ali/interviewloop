@@ -1,5 +1,5 @@
 """
-MIIC-Sec Phase 2 Tests
+InterviewLoop Phase 2 Tests
 Verifies: TOTP, JWT, audit log hash chain, and face embedding serialization.
 """
 
@@ -54,7 +54,7 @@ class TestTOTP:
         from auth.totp_auth import generate_totp_secret, get_totp_qr_code
 
         secret = generate_totp_secret()
-        qr_b64 = get_totp_qr_code(secret, "test@miicsec.com")
+        qr_b64 = get_totp_qr_code(secret, "test@interviewloopsec.com")
 
         assert qr_b64 is not None
         assert len(qr_b64) > 100  # Base64 encoded PNG should be substantial

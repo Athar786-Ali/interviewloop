@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Phase 3 Test Suite
+InterviewLoop — Phase 3 Test Suite
 Tests for the AI Interview Engine (Tier 2).
 
 Run with:

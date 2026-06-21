@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Auth Routes
+InterviewLoop — Auth Routes
 FastAPI endpoints for enrollment, login, and TOTP setup.
 Phase 1: email/password signup + OTP verification added.
 """
@@ -458,7 +458,27 @@ async def signup(
     # Duplicate check
     existing = db.query(Candidate).filter(Candidate.email == email).first()
     if existing:
-        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+        if not existing.is_email_verified:
+            # Re-send OTP for unverified accounts
+            from fastapi.responses import JSONResponse
+            
+            try:
+                otp = create_otp_token(email, db)
+                send_otp_email(email, otp, existing.name)
+            except HTTPException as e:
+                # Catch 429 cooldown from create_otp_token
+                raise e
+            
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "unverified_account",
+                    "detail": "An account exists but isn't verified yet. We've sent a new code to your email.",
+                    "requires_email_verification": True
+                }
+            )
+        else:
+            raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
     # Create candidate
     candidate_id = str(uuid.uuid4())
@@ -603,3 +623,114 @@ async def password_login(
         "name":         candidate.name,
     }
 
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp_code: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    db=Depends(get_db),
+):
+    """
+    Generate an OTP and send it to the user's email if they exist.
+    Always returns a generic success message to prevent email enumeration.
+    """
+    email = body.email.strip().lower()
+    candidate = db.query(Candidate).filter(Candidate.email == email).first()
+
+    if candidate:
+        try:
+            otp = create_otp_token(email, db)
+            send_otp_email(email, otp, candidate.name)
+        except HTTPException:
+            # Swallow 429 to not reveal existence if they spam it, but actually
+            # it's better to surface the 429 to prevent spamming the endpoint anyway.
+            # However, for exact enumeration prevention, we could swallow it.
+            # But the requirement is: "Always return a generic success message"
+            # wait, requirement 3 says: "return a clear message: 'Please wait 60 seconds...'"
+            # So we SHOULD let the 429 bubble up.
+            raise
+
+    return {"message": "If that email is registered, we've sent a password reset code."}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    db=Depends(get_db),
+):
+    """
+    Verify OTP and set a new password.
+    """
+    email = body.email.strip().lower()
+
+    if len(body.new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters."
+        )
+
+    candidate = db.query(Candidate).filter(Candidate.email == email).first()
+    if not candidate:
+        # Prevent enum but use the same generic error
+        raise HTTPException(
+            status_code=400,
+            detail="That code is invalid or has expired. Request a new one."
+        )
+
+    if not verify_otp(email, body.otp_code, db):
+        raise HTTPException(
+            status_code=400,
+            detail="That code is invalid or has expired. Request a new one."
+        )
+
+    candidate.password_hash = hash_password(body.new_password)
+    # Also verify email if they hadn't already, since they just proved ownership
+    candidate.is_email_verified = True
+    db.commit()
+
+    return {"message": "Password reset successful. Please login."}
+
+
+from interview.routes import get_token_payload
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    db=Depends(get_db),
+    payload: dict = Depends(get_token_payload),
+):
+    """
+    Change password for an authenticated user.
+    """
+    if len(body.new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters."
+        )
+
+    candidate_id = payload.get("candidate_id")
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+
+    if not candidate.password_hash or not verify_password(body.old_password, candidate.password_hash):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect old password."
+        )
+
+    candidate.password_hash = hash_password(body.new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully."}

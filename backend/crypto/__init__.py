@@ -1,2 +1,2 @@
-# MIIC-Sec Crypto Module
+# InterviewLoop Crypto Module
 # RSA signing, hash-chain audit log

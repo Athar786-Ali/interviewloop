@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Voice Authentication Module
+InterviewLoop — Voice Authentication Module
 wav2vec2-based voice embedding extraction, enrollment, and verification.
 """
 

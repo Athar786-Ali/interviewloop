@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Security Routes (Tier 3 / Tier 4)
+InterviewLoop — Security Routes (Tier 3 / Tier 4)
 FastAPI router for browser-side security events:
 
   POST /security/tab-switch       — candidate switched browser tab

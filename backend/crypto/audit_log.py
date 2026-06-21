@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Audit Log with SHA-256 Hash Chaining
+InterviewLoop — Audit Log with SHA-256 Hash Chaining
 Tamper-proof event logging for interview sessions.
 """
 

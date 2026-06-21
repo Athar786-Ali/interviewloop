@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Emotion & Behaviour Analysis
+InterviewLoop — Emotion & Behaviour Analysis
 Runs in a background thread during an active interview session.
 
 Dependencies:

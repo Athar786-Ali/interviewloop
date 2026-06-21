@@ -1,5 +1,5 @@
 """
-MIIC-Sec — JWT Manager
+InterviewLoop — JWT Manager
 RS256-based JWT creation and verification using RSA keypair.
 """
 

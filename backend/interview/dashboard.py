@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Student Dashboard API
+InterviewLoop — Student Dashboard API
 GET /user/dashboard — Returns candidate profile, aggregate stats, and interview history.
 GET /user/progress  — Returns topic-wise performance data (Phase 2).
 """
@@ -210,7 +210,7 @@ async def download_growth_pdf(
         return FileResponse(
             path,
             media_type="application/pdf",
-            filename=f"miic_growth_report_{candidate_id[:8]}.pdf",
+            filename=f"interviewloop_growth_report_{candidate_id[:8]}.pdf",
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {exc}")

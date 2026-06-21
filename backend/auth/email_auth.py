@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Email Authentication Module
+InterviewLoop — Email Authentication Module
 Password hashing, OTP generation, and SMTP email delivery.
 """
 
@@ -41,10 +41,24 @@ def create_otp_token(email: str, db_session) -> str:
     """
     Delete any existing unused OTPs for this email, create a new one
     that expires in 10 minutes, persist it, and return the code.
+    Enforces a 60-second cooldown between requests.
     """
     from database import OtpToken
+    from fastapi import HTTPException
 
     now = datetime.now(timezone.utc)
+
+    # Check for recent tokens to enforce 60s cooldown
+    recent = db_session.query(OtpToken).filter(
+        OtpToken.email == email,
+        OtpToken.created_at >= now - timedelta(seconds=60)
+    ).first()
+    
+    if recent:
+        raise HTTPException(
+            status_code=429,
+            detail="Please wait 60 seconds before requesting another code."
+        )
 
     # Invalidate old tokens for this email
     old = db_session.query(OtpToken).filter(OtpToken.email == email).all()
@@ -102,7 +116,7 @@ def _get_smtp_config() -> dict:
         "port":     int(os.environ.get("SMTP_PORT", "587")),
         "user":     os.environ.get("SMTP_USER", ""),
         "password": os.environ.get("SMTP_PASS", ""),
-        "from":     os.environ.get("FROM_EMAIL", os.environ.get("SMTP_USER", "noreply@miic-sec.local")),
+        "from":     os.environ.get("FROM_EMAIL", os.environ.get("SMTP_USER", "noreply@interviewloop.local")),
     }
 
 
@@ -132,7 +146,7 @@ def send_otp_email(email: str, otp: str, name: str = "") -> bool:
     <div style="font-family:sans-serif;max-width:480px;margin:40px auto;
                 background:#1a1a2e;border-radius:12px;padding:32px;
                 border:1px solid #2a2a4a;color:#e2e8f8">
-      <h2 style="color:#6366f1;margin-bottom:8px">🛡 MIIC-Sec</h2>
+      <h2 style="color:#6366f1;margin-bottom:8px">🔄 InterviewLoop</h2>
       <p style="color:#8b94ac">{greeting}</p>
       <p>Your email verification code is:</p>
       <div style="font-size:2.5rem;font-weight:800;letter-spacing:0.3em;
@@ -149,7 +163,7 @@ def send_otp_email(email: str, otp: str, name: str = "") -> bool:
     """
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Your MIIC-Sec verification code: {otp}"
+    msg["Subject"] = f"Your InterviewLoop verification code: {otp}"
     msg["From"]    = cfg["from"]
     msg["To"]      = email
     msg.attach(MIMEText(html, "html"))

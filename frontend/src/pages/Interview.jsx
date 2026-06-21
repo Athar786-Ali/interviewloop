@@ -669,7 +669,7 @@ function CodePanel({ templateCode }) {
         <span style={{ display: 'flex', gap: 16 }}>
           <span>UTF-8</span>
           <span>Tab Size: 4</span>
-          <span>MIIC-Sec Sandbox</span>
+          <span>InterviewLoop Sandbox</span>
         </span>
       </div>
     </div>
@@ -909,7 +909,7 @@ export default function Interview() {
       <div style={{ padding: '16px 24px', background: 'var(--clr-surface)', borderBottom: '1px solid var(--clr-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="logo-mark">🛡</div>
-          <h1 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>MIIC-Sec Interview</h1>
+          <h1 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>InterviewLoop Interview</h1>
         </div>
         <div style={{ color: 'var(--clr-text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
           Session: {sessionId.split('-')[0]}

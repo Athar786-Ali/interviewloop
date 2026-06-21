@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Continuous Verification Loop (Tier 3)
+InterviewLoop — Continuous Verification Loop (Tier 3)
 Async background task that periodically re-checks the candidate's
 identity during an active interview session.
 
@@ -85,7 +85,7 @@ async def terminate_session(
         return_exceptions=True,
     )
 
-    print(f"[MIIC-Sec] ⛔  Session {session_id} TERMINATED — {reason}")
+    print(f"[InterviewLoop] ⛔  Session {session_id} TERMINATED — {reason}")
 
 
 # ─── Step-Up TOTP ────────────────────────────────────────────────────────────

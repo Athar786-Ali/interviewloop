@@ -1,5 +1,5 @@
 """
-MIIC-Sec — WebSocket Connection Manager
+InterviewLoop — WebSocket Connection Manager
 Real-time bidirectional event delivery to candidate and recruiter clients.
 """
 
@@ -34,7 +34,7 @@ def _iso_now() -> str:
 
 def _build_message(event: str, data: dict) -> dict:
     """
-    Construct the canonical MIIC-Sec WebSocket message envelope.
+    Construct the canonical InterviewLoop WebSocket message envelope.
 
     Args:
         event:  One of the event-type constants above.

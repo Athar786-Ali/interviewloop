@@ -1,5 +1,5 @@
 """
-MIIC-Sec Database Layer
+InterviewLoop Database Layer
 SQLAlchemy models + SQLite engine for all core tables.
 """
 

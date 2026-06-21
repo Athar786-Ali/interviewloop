@@ -1,5 +1,5 @@
 """
-MIIC-Sec Phase 1 Tests
+InterviewLoop Phase 1 Tests
 Verifies: RSA keys, database, tables, config, and /health endpoint.
 """
 
@@ -47,7 +47,7 @@ class TestDatabase:
     def setup_db(self, tmp_path, monkeypatch):
         """Create a temp database for testing."""
         # Override DATABASE_URL to use a temp file
-        db_path = tmp_path / "test_miic_sec.db"
+        db_path = tmp_path / "test_interviewloop.db"
         monkeypatch.setattr("config.DATABASE_URL", f"sqlite:///{db_path}")
 
         # Re-import database module with patched config

@@ -1,2 +1,2 @@
-# MIIC-Sec WebSocket Module
+# InterviewLoop WebSocket Module
 # Real-time event streaming for candidates and recruiters

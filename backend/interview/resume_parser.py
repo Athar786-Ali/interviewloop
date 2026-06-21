@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Resume Parser
+InterviewLoop — Resume Parser
 Extracts text from uploaded PDF resumes and structures it for LLM context.
 """
 

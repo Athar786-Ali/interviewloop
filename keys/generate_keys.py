@@ -1,7 +1,7 @@
 """
-RSA-2048 Keypair Generator for MIIC-Sec
+RSA-2048 Keypair Generator for InterviewLoop
 
-- Private key: AES-256 encrypted with password "miicsec_secret"
+- Private key: AES-256 encrypted with password "interviewloopsec_secret"
 - Public key: PEM format
 - Skips generation if keys already exist
 """
@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 KEYS_DIR = os.path.dirname(os.path.abspath(__file__))
 PRIVATE_KEY_PATH = os.path.join(KEYS_DIR, "private_key.pem")
 PUBLIC_KEY_PATH = os.path.join(KEYS_DIR, "public_key.pem")
-KEY_PASSWORD = b"miicsec_secret"
+KEY_PASSWORD = b"interviewloopsec_secret"
 
 
 def generate_keys():

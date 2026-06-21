@@ -1,2 +1,2 @@
-# MIIC-Sec Security Module
+# InterviewLoop Security Module
 # Browser-side security event endpoints (tab-switch, step-up TOTP).

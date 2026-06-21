@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Face Authentication Module
+InterviewLoop — Face Authentication Module
 facenet-pytorch (InceptionResnetV1 + MTCNN) based face embedding.
 Pure PyTorch — works on Python 3.13 without TensorFlow.
 """

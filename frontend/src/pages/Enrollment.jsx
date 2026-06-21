@@ -290,7 +290,7 @@ function VoiceStep({ onNext, onSkip }) {
         fontStyle: 'italic', color: 'var(--clr-text)', lineHeight: 1.6, fontSize: '1rem',
       }}>
         "My name is [your name] and I am applying for a technical position. I confirm my identity
-        for the MIIC secure interview platform."
+        for the InterviewLoop secure interview platform."
       </div>
 
       {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
@@ -643,7 +643,7 @@ export default function Enrollment() {
       <div className="card" style={{ width: '100%', maxWidth: 580 }}>
         <div className="page-header">
           <div className="logo-mark">🛡</div>
-          <h1>MIIC-Sec Enrollment</h1>
+          <h1>InterviewLoop Enrollment</h1>
         </div>
 
         <StepBar current={step} />

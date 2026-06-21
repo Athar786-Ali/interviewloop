@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Hint Engine (Phase 3)
+InterviewLoop — Hint Engine (Phase 3)
 Provides gentle, non-answer-revealing nudges in "Just Practice" mode.
 """
 

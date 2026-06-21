@@ -1,2 +1,2 @@
-# MIIC-Sec Verification Module
+# InterviewLoop Verification Module
 # Face, voice, and behavior verification

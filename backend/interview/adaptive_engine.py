@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Adaptive Difficulty Engine
+InterviewLoop — Adaptive Difficulty Engine
 Adjusts question difficulty based on rolling average of candidate scores.
 """
 

@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Audio Transcriber (Deepgram)
+InterviewLoop — Audio Transcriber (Deepgram)
 
 Replaces Whisper with Deepgram's pre-recorded transcription REST API.
 

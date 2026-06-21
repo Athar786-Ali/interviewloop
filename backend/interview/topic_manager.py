@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Topic Manager
+InterviewLoop — Topic Manager
 Defines available CS interview topics and builds LLM system prompts for each mode.
 """
 

@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Liveness Detector
+InterviewLoop — Liveness Detector
 Uses OpenCV Haar cascade + eye-blink heuristic.
 TensorFlow-based CNN has been replaced because TF 2.x segfaults
 on Python 3.13 / macOS (known upstream issue).

@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Interview Routes (v2)
+InterviewLoop — Interview Routes (v2)
 Adds resume upload, topic selection, status endpoint, voice transcription,
 and multi-mode interview support.
 """
@@ -143,7 +143,7 @@ async def deepgram_token(
 
         # TTL = 300 seconds (5 minutes) — tight window for a single interview question
         key_payload = {
-            "comment": "MIIC-Sec browser live transcription (temporary)",
+            "comment": "InterviewLoop browser live transcription (temporary)",
             "scopes": ["usage:write"],
             "time_to_live_in_seconds": 300,
         }

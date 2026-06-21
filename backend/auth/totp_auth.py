@@ -1,5 +1,5 @@
 """
-MIIC-Sec — TOTP Authentication Module
+InterviewLoop — TOTP Authentication Module
 Time-based One-Time Password generation, QR codes, and verification.
 """
 
@@ -34,7 +34,7 @@ def get_totp_qr_code(secret: str, candidate_email: str) -> str:
     totp = pyotp.totp.TOTP(secret)
     provisioning_uri = totp.provisioning_uri(
         name=candidate_email,
-        issuer_name="MIIC-Sec",
+        issuer_name="InterviewLoop",
     )
 
     # Generate QR code image

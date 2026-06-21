@@ -1,5 +1,5 @@
 """
-MIIC-Sec — LLM Interviewer
+InterviewLoop — LLM Interviewer
 Manages interview sessions backed by a local Ollama instance.
 
 Ollama endpoint: http://localhost:11434

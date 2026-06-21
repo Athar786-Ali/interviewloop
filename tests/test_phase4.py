@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Phase 4 Test Suite
+InterviewLoop — Phase 4 Test Suite
 Tests for Tier 3 (continuous verification) and Tier 4 (proxy + intruder detection).
 
 Run with:

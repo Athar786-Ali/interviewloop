@@ -1,5 +1,5 @@
 """
-MIIC-Sec — Proxy / Intruder Detection (Tier 4)
+InterviewLoop — Proxy / Intruder Detection (Tier 4)
 Uses YOLOv8n (lightest Ultralytics model) to count persons in each
 video frame.  Operates every 10 frames for M1 performance.
 
